@@ -5,7 +5,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { TopBar } from "./components/TopBar";
-import { PrayerBuilderView } from "./components/PrayerBuilderView";
+import { PrayerBuilderView, type WizardStep } from "./components/PrayerBuilderView";
 import { DailyThemesView } from "./components/DailyThemesView";
 import { FocusTimerView } from "./components/FocusTimerView";
 import { JournalView } from "./components/JournalView";
@@ -42,9 +42,9 @@ export default function App() {
   const [activeView, setActiveView] = useState<AppView>("builder");
   const [selectedTheme, setSelectedTheme] = useState<DailyBiblicalTheme | null>(null);
 
-  // Builder state
+  // 8-step wizard state
   const [heart, setHeart] = useState<HeartInput>(EMPTY_HEART);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [wizardStep, setWizardStep] = useState<WizardStep>(1);
   const [questionsData, setQuestionsData] = useState<QuestionsResponse | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [composedPrayer, setComposedPrayer] = useState<ComposedPrayer | null>(null);
@@ -70,7 +70,7 @@ export default function App() {
 
   const handleResetBuilder = useCallback(() => {
     setHeart(EMPTY_HEART);
-    setStep(1);
+    setWizardStep(1);
     setQuestionsData(null);
     setAnswers({});
     setComposedPrayer(null);
@@ -81,7 +81,7 @@ export default function App() {
 
   const handlePrayWithTheme = useCallback((theme: DailyBiblicalTheme) => {
     setSelectedTheme(theme);
-    setStep(1);
+    setWizardStep(1);
     setQuestionsData(null);
     setComposedPrayer(null);
     setSavedCurrentId(null);
@@ -113,6 +113,7 @@ export default function App() {
         title: prayer.title,
         themeTitle: selectedTheme?.title,
         heart: { ...heart },
+        organizedSummary: prayer.organizedSummary,
         prayerParagraphs: prayer.prayerParagraphs,
         structureNotes: prayer.structureNotes,
         anchorVerse: prayer.anchorVerse,
@@ -176,7 +177,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F9F8F4] text-[#1C1B18]">
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA] text-[#111827] font-light">
       <TopBar
         activeView={activeView}
         onSelectView={(view) => {
@@ -195,8 +196,8 @@ export default function App() {
             onSelectTodayTheme={() => handlePrayWithTheme(todayTheme)}
             heart={heart}
             onHeartChange={setHeart}
-            step={step}
-            onStepChange={setStep}
+            wizardStep={wizardStep}
+            onWizardStepChange={setWizardStep}
             questionsData={questionsData}
             onQuestionsDataChange={setQuestionsData}
             answers={answers}
@@ -247,9 +248,9 @@ export default function App() {
         {activeView === "update" && <UpdateView />}
       </main>
 
-      <footer className="border-t border-[#E5E1D8] mt-16">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#5E5B52]">
-          <div className="flex flex-wrap items-center gap-2">
+      <footer className="border-t border-[#E5E7EB] mt-16 bg-white">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#525C6B]">
+          <div className="flex flex-wrap items-center gap-2 font-light">
             <span>
               Oratório — Um auxílio para fortalecer a oração, nunca para substituí-la.
             </span>
@@ -260,12 +261,12 @@ export default function App() {
                 setActiveView("update");
                 window.scrollTo({ top: 0, behavior: "smooth" });
               }}
-              className="font-mono text-[#1B3B2F] hover:underline underline-offset-4 whitespace-nowrap"
+              className="font-bold text-[#0F3D34] hover:underline underline-offset-4 whitespace-nowrap"
             >
               v{APP_VERSION} · Atualizar APK
             </button>
           </div>
-          <p className="font-serif italic text-sm text-[#1C1B18]">
+          <p className="text-xs font-light italic text-[#111827]">
             “Perseverem na oração, vigiando com ações de graças.” — Colossenses 4:2
           </p>
         </div>

@@ -295,8 +295,32 @@ export function composeOfflinePrayer(
     title = `Oração guiada: ${themeContext.split("(")[0].trim()}`;
   }
 
+  const organizedSummary: { label: string; summary: string }[] = [];
+  if (heart.feelings.trim()) {
+    organizedSummary.push({ label: "Sentimentos", summary: cleanClause(heart.feelings) });
+  }
+  if (heart.desires.trim()) {
+    organizedSummary.push({ label: "Desejos e sonhos", summary: cleanClause(heart.desires) });
+  }
+  if (heart.fears.trim()) {
+    organizedSummary.push({ label: "Medos entregues", summary: cleanClause(heart.fears) });
+  }
+  if (heart.courage.trim()) {
+    organizedSummary.push({ label: "Onde busca coragem", summary: cleanClause(heart.courage) });
+  }
+  if (heart.freeText.trim()) {
+    organizedSummary.push({ label: "Palavra livre", summary: cleanClause(heart.freeText) });
+  }
+  if (cleanAnswers.length > 0) {
+    organizedSummary.push({
+      label: "Reflexões",
+      summary: cleanAnswers.join(" · "),
+    });
+  }
+
   return {
     title,
+    organizedSummary,
     prayerParagraphs: paragraphs,
     structureNotes: [
       {

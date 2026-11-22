@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
-const MODEL_NAME = "gemini-4-hydrogen";
+const MODEL_NAME = "gemini-3.1-flash-lite";
 
 function getAiClient(): GoogleGenAI {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -407,7 +407,7 @@ async function startServer() {
           model: MODEL_NAME,
           contents: `O cristão compartilhou o seguinte antes de orar:\n\n${userSummary}\n\nElabore uma frase breve de acolhimento e 3 perguntas reflexivas que o ajudem a aprofundar a sinceridade diante de Deus e alinhar seu coração aos propósitos bíblicos.`,
           config: {
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
             systemInstruction:
               "Você é um conselheiro espiritual cristão sábio, humilde, bíblico e acolhedor, falando em português do Brasil. Seu papel NÃO é substituir a oração da pessoa, mas ajudá-la a clarear o coração e aprender a orar com verdade. Faça perguntas curtas (1 frase), humanas, sem jargões religiosos artificiais, sem julgamento e diretamente conectadas ao que a pessoa escreveu. As 3 perguntas devem cobrir: (1) nomear com verdade o que pesa ou alegra o coração, (2) entregar temores ou desejos à sabedoria de Deus, e (3) discernir um passo de fé, obediência ou coragem alinhado ao Evangelho.",
             responseMimeType: "application/json",
@@ -506,11 +506,11 @@ async function startServer() {
       const response = await generateWithRetry(() =>
         ai.models.generateContent({
           model: MODEL_NAME,
-          contents: `${promptParts.join("\n")}\n\nMonte a oração genuína, resumida e verdadeira que contemple tudo o que a pessoa expressou, alinhada aos propósitos de Deus, junto com notas breves que ensinem a estrutura dessa oração e um versículo bíblico adequado.`,
+          contents: `${promptParts.join("\n")}\n\nPrimeiro, organize um resumo claro e 100% fiel de tudo o que a pessoa digitou (sem inventar fatos). Em seguida, usando esse resumo organizado, monte uma oração completa, genuína e verdadeira que contemple cada situação e sentimento mencionado pela pessoa, alinhada aos propósitos de Deus, junto com notas breves que ensinem a estrutura dessa oração e um versículo bíblico adequado.`,
           config: {
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
             systemInstruction:
-              "Você ajuda cristãos a fortalecerem sua vida de oração e aprenderem a orar, escrevendo em português do Brasil. Regras essenciais:\n1. A oração deve ser escrita em primeira pessoa falando diretamente com Deus (Pai, Senhor), com linguagem verdadeira, humana, reverente e natural — nunca rebuscada ou cheia de clichês.\n2. Tudo o que a pessoa mencionou (sentimentos, desejos, pretensões, medos, coragem e respostas) precisa aparecer de forma resumida, honesta e fiel, para que ao ler ela reconheça o próprio coração.\n3. Alinhe cada pedido e anseio à vontade soberana, à sabedoria e aos propósitos de Deus (como Jesus ensinou: 'seja feita a tua vontade').\n4. Seja conciso: 3 a 4 parágrafos bem escritos que possam ser orados em voz alta com calma.\n5. Inclua 3 notas curtas de aprendizado ('structureNotes') mostrando os pilares bíblicos usados na oração (ex: Sinceridade diante de Deus, Entrega dos Temores, Petição alinhada ao Propósito, Gratidão), para ensinar o usuário a orar com autonomia.\n6. Escolha um versículo bíblico real e fiel às Escrituras (NVI ou ARA) que ancore a oração.",
+              "Você ajuda cristãos a fortalecerem sua vida de oração e aprenderem a orar, escrevendo em português do Brasil com máxima fidelidade ao que o usuário escreveu. Regras essenciais:\n1. NUNCA invente situações, nomes ou problemas que a pessoa não mencionou. Use fielmente cada ponto trazido por ela.\n2. Em 'organizedSummary', resuma de forma clara, organizada e respeitosa os principais pontos que a pessoa compartilhou (ex: Sentimentos, Desejos e Sonhos, Medos Entregues, Pedido de Coragem, Reflexões) — inclua apenas os tópicos que realmente tiverem conteúdo informado.\n3. Em 'prayerParagraphs', escreva uma oração completa, profunda e natural (4 parágrafos bem construídos) em primeira pessoa falando diretamente com Deus (Pai, Senhor), contemplando de forma organizada e fiel CADA situação, sentimento, desejo, medo, passo de coragem e resposta informada pelo usuário.\n4. Alinhe cada pedido e sonho à vontade soberana, à sabedoria e aos propósitos de Deus (como Jesus ensinou: 'seja feita a tua vontade').\n5. Inclua 3 notas curtas de aprendizado ('structureNotes') mostrando os pilares bíblicos usados na oração para ensinar o usuário a orar com autonomia.\n6. Escolha um versículo bíblico real e fiel às Escrituras (NVI ou ARA) que ancore a oração.",
             responseMimeType: "application/json",
             responseSchema: {
               type: Type.OBJECT,
@@ -519,10 +519,28 @@ async function startServer() {
                   type: Type.STRING,
                   description: "Título curto e digno para a oração (4 a 8 palavras).",
                 },
+                organizedSummary: {
+                  type: Type.ARRAY,
+                  description: "Resumo organizado e fiel dos pontos que a pessoa digitou antes da oração.",
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      label: {
+                        type: Type.STRING,
+                        description: "Nome breve da dimensão (ex: Sentimentos, Desejos e sonhos, Temores entregues, Coragem).",
+                      },
+                      summary: {
+                        type: Type.STRING,
+                        description: "Síntese organizada e fiel do que a pessoa compartilhou nessa dimensão (1 frase).",
+                      },
+                    },
+                    required: ["label", "summary"],
+                  },
+                },
                 prayerParagraphs: {
                   type: Type.ARRAY,
                   items: { type: Type.STRING },
-                  description: "3 a 4 parágrafos da oração em primeira pessoa, terminando com Amém no último parágrafo.",
+                  description: "4 parágrafos completos e fiéis da oração em primeira pessoa, terminando com Amém no último parágrafo.",
                 },
                 structureNotes: {
                   type: Type.ARRAY,
@@ -558,7 +576,14 @@ async function startServer() {
                   description: "Um passo simples e concreto de fé, obediência ou descanso para hoje (1 frase).",
                 },
               },
-              required: ["title", "prayerParagraphs", "structureNotes", "anchorVerse", "faithStep"],
+              required: [
+                "title",
+                "organizedSummary",
+                "prayerParagraphs",
+                "structureNotes",
+                "anchorVerse",
+                "faithStep",
+              ],
             },
           },
         })
@@ -566,7 +591,7 @@ async function startServer() {
 
       const raw = (response.text ?? "").trim();
       const parsed = JSON.parse(raw);
-      res.json(parsed);
+      res.json({ ...parsed, modelUsed: MODEL_NAME });
     } catch (error) {
       const mapped = mapGeminiError(error);
       res.status(mapped.status).json({ error: mapped.message });
@@ -588,7 +613,7 @@ async function startServer() {
           model: MODEL_NAME,
           contents: `Crie um breve guia devocional bíblico em português do Brasil sobre o tema: "${topic}".`,
           config: {
-            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
             systemInstruction:
               "Você prepara sugestões breves de temas bíblicos para guiar a oração de cristãos em português do Brasil. Use versículos reais e fiéis às Escrituras (ARA ou NVI), meditação clara e 3 passos práticos de oração (Reconhecer, Entregar, Pedir).",
             responseMimeType: "application/json",

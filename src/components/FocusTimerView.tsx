@@ -176,47 +176,46 @@ export function FocusTimerView({
     }
   };
 
-  // Ring math
   const radius = 112;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference * (1 - Math.min(1, Math.max(0, progress)));
 
   return (
-    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 lg:py-14">
-      <div className="mb-10 pb-5 border-b border-[#E5E1D8] flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 lg:py-12">
+      <div className="mb-10 pb-5 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-2">
+          <p className="text-xs font-bold text-[#0F3D34] mb-1.5">
             Tempo Separado de Oração
           </p>
-          <h1 className="font-serif text-4xl font-medium text-[#1C1B18]">
+          <h1 className="font-display-condensed text-4xl sm:text-5xl text-[#111827] leading-none">
             Cronômetro de Foco
           </h1>
         </div>
-        <p className="text-xs text-[#5E5B52] font-mono tabular-nums">
+        <p className="text-xs font-medium text-[#525C6B] font-mono tabular-nums">
           Total dedicado: {totalMinutesLogged} min
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-12 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-10 items-start">
         {/* Left: Focal Timer Stage */}
         <section
           aria-label="Cronômetro de oração"
-          className="bg-white border border-[#E5E1D8] rounded-md p-7 sm:p-10 flex flex-col items-center text-center"
+          className="bg-white border border-[#E5E7EB] rounded-2xl p-7 sm:p-10 flex flex-col items-center text-center shadow-[0_1px_3px_rgba(15,23,42,0.04)]"
         >
           {/* Mode & Sound Controls */}
-          <div className="w-full flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-[#E5E1D8]">
+          <div className="w-full flex flex-wrap items-center justify-between gap-3 pb-6 border-b border-[#E5E7EB]">
             <div
               role="group"
               aria-label="Modo do cronômetro"
-              className="flex items-center gap-1 p-1 bg-[#F2EFE8] rounded-md"
+              className="flex items-center gap-1 p-1 bg-[#F2F4F7] rounded-xl"
             >
               <button
                 type="button"
                 onClick={() => setGuidedMode(true)}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap shrink-0 ${
+                className={`px-3 py-1.5 text-xs rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                   guidedMode
-                    ? "bg-white text-[#1B3B2F] shadow-xs"
-                    : "text-[#5E5B52] hover:text-[#1C1B18]"
+                    ? "bg-white text-[#0F3D34] font-bold shadow-xs"
+                    : "text-[#525C6B] font-light hover:text-[#111827]"
                 }`}
               >
                 Fases guiadas
@@ -224,10 +223,10 @@ export function FocusTimerView({
               <button
                 type="button"
                 onClick={() => setGuidedMode(false)}
-                className={`px-3 py-1.5 text-xs font-medium rounded transition-colors whitespace-nowrap shrink-0 ${
+                className={`px-3 py-1.5 text-xs rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                   !guidedMode
-                    ? "bg-white text-[#1B3B2F] shadow-xs"
-                    : "text-[#5E5B52] hover:text-[#1C1B18]"
+                    ? "bg-white text-[#0F3D34] font-bold shadow-xs"
+                    : "text-[#525C6B] font-light hover:text-[#111827]"
                 }`}
               >
                 Silêncio livre
@@ -237,17 +236,17 @@ export function FocusTimerView({
             <button
               type="button"
               onClick={() => setSoundEnabled((v) => !v)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#5E5B52] hover:text-[#1C1B18] rounded-md transition-colors whitespace-nowrap shrink-0 min-h-[36px]"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[#525C6B] hover:text-[#111827] rounded-lg transition-colors whitespace-nowrap shrink-0 min-h-[36px]"
               aria-pressed={soundEnabled}
             >
               {soundEnabled ? (
                 <>
-                  <Volume2 className="w-4 h-4 text-[#1B3B2F]" />
+                  <Volume2 className="w-4 h-4 text-[#0F3D34]" />
                   Sino suave
                 </>
               ) : (
                 <>
-                  <VolumeX className="w-4 h-4 text-[#8A8578]" />
+                  <VolumeX className="w-4 h-4 text-[#7B8494]" />
                   Sem som
                 </>
               )}
@@ -266,16 +265,16 @@ export function FocusTimerView({
                 cy="128"
                 r={radius}
                 fill="none"
-                stroke="#EAE6DD"
-                strokeWidth="3"
+                stroke="#EAECEF"
+                strokeWidth="3.5"
               />
               <circle
                 cx="128"
                 cy="128"
                 r={radius}
                 fill="none"
-                stroke="#1B3B2F"
-                strokeWidth="3.5"
+                stroke="#0F3D34"
+                strokeWidth="4"
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={dashOffset}
@@ -284,10 +283,10 @@ export function FocusTimerView({
             </svg>
 
             <div className="absolute inset-0 flex flex-col items-center justify-center px-6">
-              <span className="font-mono text-5xl font-medium tracking-tight text-[#1C1B18] tabular-nums">
+              <span className="font-mono text-5xl font-medium tracking-tight text-[#111827] tabular-nums">
                 {formatTimer(remainingSeconds)}
               </span>
-              <span className="mt-2 text-xs text-[#5E5B52]">
+              <span className="mt-2 text-xs font-light text-[#525C6B]">
                 {completed
                   ? "Tempo concluído"
                   : isRunning
@@ -303,25 +302,25 @@ export function FocusTimerView({
           <div className="min-h-[76px] max-w-md">
             {completed ? (
               <div className="flex flex-col items-center">
-                <p className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1B3B2F]">
+                <p className="inline-flex items-center gap-1.5 text-sm font-bold text-[#0F3D34]">
                   <CheckCircle2 className="w-4 h-4" />
                   Momento de oração registrado
                 </p>
-                <p className="mt-1.5 text-sm text-[#5E5B52] leading-relaxed">
+                <p className="mt-1.5 text-sm font-light text-[#525C6B] leading-relaxed">
                   Que a paz de Deus guarde o seu coração e a sua mente ao longo deste dia.
                 </p>
               </div>
             ) : guidedMode ? (
               <div>
-                <p className="text-xs font-medium text-[#1B3B2F]">
+                <p className="text-xs font-bold text-[#0F3D34]">
                   {currentPhase.index}. {currentPhase.title}
                 </p>
-                <p className="mt-1.5 text-sm text-[#5E5B52] leading-relaxed">
+                <p className="mt-1.5 text-sm font-light text-[#525C6B] leading-relaxed">
                   {currentPhase.guidance}
                 </p>
               </div>
             ) : (
-              <p className="text-sm text-[#5E5B52] leading-relaxed">
+              <p className="text-sm font-light text-[#525C6B] leading-relaxed">
                 Deixe as distrações de lado e converse livremente com Deus no seu ritmo.
               </p>
             )}
@@ -336,10 +335,10 @@ export function FocusTimerView({
                   key={mins}
                   type="button"
                   onClick={() => handleSelectPreset(mins)}
-                  className={`px-3 py-1.5 text-xs font-mono tabular-nums rounded-md border transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
+                  className={`px-3 py-1.5 text-xs font-mono tabular-nums rounded-lg border transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
                     active
-                      ? "bg-[#EBF1EE] border-[#1B3B2F] text-[#1B3B2F] font-medium"
-                      : "bg-white border-[#E5E1D8] text-[#5E5B52] hover:border-[#1B3B2F]"
+                      ? "bg-[#EAF3F0] border-[#0F3D34] text-[#0F3D34] font-bold"
+                      : "bg-white border-[#E5E7EB] text-[#525C6B] hover:border-[#0F3D34]"
                   }`}
                 >
                   {mins} min
@@ -353,7 +352,7 @@ export function FocusTimerView({
             <button
               type="button"
               onClick={handleTogglePlay}
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#F9F8F4] bg-[#1B3B2F] rounded-md hover:bg-[#142D24] transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
+              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold text-white bg-[#0F3D34] rounded-lg hover:bg-[#0A2C25] transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
             >
               {isRunning ? (
                 <>
@@ -375,7 +374,7 @@ export function FocusTimerView({
             <button
               type="button"
               onClick={handleReset}
-              className="inline-flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-[#5E5B52] hover:text-[#1C1B18] border border-[#E5E1D8] rounded-md transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
+              className="inline-flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-[#525C6B] hover:text-[#111827] border border-[#E5E7EB] rounded-lg transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
             >
               <RotateCcw className="w-4 h-4" />
               Reiniciar
@@ -385,7 +384,7 @@ export function FocusTimerView({
               <button
                 type="button"
                 onClick={handleFinishEarly}
-                className="px-4 py-3 text-sm font-medium text-[#1B3B2F] hover:underline underline-offset-4 whitespace-nowrap shrink-0 min-h-[44px]"
+                className="px-4 py-3 text-sm font-bold text-[#0F3D34] hover:underline underline-offset-4 whitespace-nowrap shrink-0 min-h-[44px]"
               >
                 Concluir e registrar
               </button>
@@ -397,10 +396,10 @@ export function FocusTimerView({
         <aside className="space-y-6">
           {activePrayer ? (
             <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-2">
+              <p className="text-xs font-bold text-[#0F3D34] mb-1.5">
                 Oração em Foco
               </p>
-              <h2 className="font-serif text-3xl font-medium text-[#1C1B18] leading-snug">
+              <h2 className="font-display-condensed text-3xl sm:text-4xl text-[#111827] leading-tight">
                 {activePrayer.title}
               </h2>
 
@@ -408,44 +407,44 @@ export function FocusTimerView({
                 {activePrayer.prayerParagraphs.map((para, idx) => (
                   <p
                     key={idx}
-                    className="font-serif text-xl leading-[1.8] text-[#1C1B18]"
+                    className="text-base sm:text-[1.06rem] font-light leading-[1.85] text-[#111827]"
                   >
                     {para}
                   </p>
                 ))}
               </div>
 
-              <blockquote className="mt-8 py-5 border-y border-[#E5E1D8]">
-                <p className="font-serif italic text-lg text-[#1C1B18] leading-relaxed">
+              <blockquote className="mt-8 py-5 border-y border-[#E5E7EB]">
+                <p className="text-base sm:text-lg font-light italic text-[#111827] leading-relaxed">
                   “{activePrayer.anchorVerse.text}”
                 </p>
-                <footer className="mt-2 text-xs font-medium text-[#1B3B2F]">
+                <footer className="mt-2 text-xs font-bold text-[#0F3D34]">
                   {activePrayer.anchorVerse.reference}
                 </footer>
               </blockquote>
             </div>
           ) : (
             <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-2">
+              <p className="text-xs font-bold text-[#0F3D34] mb-1.5">
                 Roteiro de Meditação · {activeTheme.category}
               </p>
-              <h2 className="font-serif text-3xl font-medium text-[#1C1B18] leading-snug">
+              <h2 className="font-display-condensed text-3xl sm:text-4xl text-[#111827] leading-tight">
                 {activeTheme.title}
               </h2>
 
-              <blockquote className="mt-6 py-5 border-y border-[#E5E1D8]">
-                <p className="font-serif italic text-xl text-[#1C1B18] leading-relaxed">
+              <blockquote className="mt-6 py-5 border-y border-[#E5E7EB]">
+                <p className="text-lg font-light italic text-[#111827] leading-relaxed">
                   “{activeTheme.verseText}”
                 </p>
-                <footer className="mt-2 text-xs font-medium text-[#1B3B2F]">
+                <footer className="mt-2 text-xs font-bold text-[#0F3D34]">
                   {activeTheme.verseReference}
                 </footer>
               </blockquote>
 
               <ol className="mt-6 space-y-4">
                 {activeTheme.prayerDirections.map((dir, idx) => (
-                  <li key={dir.label} className="text-sm text-[#5E5B52] leading-relaxed">
-                    <span className="font-semibold text-[#1B3B2F]">
+                  <li key={dir.label} className="text-sm font-light text-[#525C6B] leading-relaxed">
+                    <span className="font-bold text-[#0F3D34]">
                       0{idx + 1}. {dir.label}:{" "}
                     </span>
                     {dir.prompt}
@@ -453,11 +452,11 @@ export function FocusTimerView({
                 ))}
               </ol>
 
-              <div className="mt-7 pt-6 border-t border-[#E5E1D8]">
+              <div className="mt-7 pt-6 border-t border-[#E5E7EB]">
                 <button
                   type="button"
                   onClick={onGoToBuilder}
-                  className="text-sm font-medium text-[#1B3B2F] hover:underline underline-offset-4"
+                  className="text-sm font-bold text-[#0F3D34] hover:underline underline-offset-4"
                 >
                   Quer montar uma oração personalizada com seus sentimentos de hoje?
                 </button>

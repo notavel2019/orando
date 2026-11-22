@@ -61,7 +61,9 @@ export function UpdateView() {
     e.preventDefault();
     const trimmed = serverInput.trim();
     if (trimmed && !isValidServerUrl(trimmed)) {
-      setServerError("Use um endereço seguro começando com https:// (ou deixe vazio para modo offline).");
+      setServerError(
+        "Use um endereço seguro começando com https:// (ou deixe vazio para modo offline)."
+      );
       setServerMsg(null);
       return;
     }
@@ -126,54 +128,58 @@ export function UpdateView() {
       : null;
 
   return (
-    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 lg:py-14">
-      <div className="pb-8 border-b border-[#E5E1D8]">
-        <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-2">
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 lg:py-12">
+      <div className="pb-8 border-b border-[#E5E7EB]">
+        <p className="text-xs font-bold text-[#0F3D34] mb-1.5">
           Android APK · GitHub Releases
         </p>
-        <h1 className="font-serif text-4xl font-medium text-[#1C1B18]">
+        <h1 className="font-display-condensed text-4xl sm:text-5xl text-[#111827] leading-none">
           Atualizar Aplicativo
         </h1>
-        <p className="mt-3 text-sm sm:text-base text-[#5E5B52] max-w-2xl leading-relaxed">
+        <p className="mt-3 text-sm sm:text-base font-light text-[#525C6B] max-w-2xl leading-relaxed">
           Informe o link do seu repositório no GitHub para verificar novas versões do
           APK e atualizar diretamente por cima do aplicativo atual, preservando seu
           Caderno de Orações sem precisar desinstalar.
         </p>
 
         {/* Installed app metadata strip */}
-        <dl className="mt-7 grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6 border-t border-[#E5E1D8]">
+        <dl className="mt-7 grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6 border-t border-[#E5E7EB]">
           <div>
-            <dt className="text-xs text-[#5E5B52]">Versão instalada</dt>
-            <dd className="mt-1 font-mono text-xl font-medium text-[#1C1B18] tabular-nums">
+            <dt className="text-xs font-light text-[#525C6B]">Versão instalada</dt>
+            <dd className="mt-1 font-display-condensed text-3xl text-[#111827] tabular-nums">
               v{APP_VERSION}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-[#5E5B52]">Número do build (versionCode)</dt>
-            <dd className="mt-1 font-mono text-xl font-medium text-[#1C1B18] tabular-nums">
+            <dt className="text-xs font-light text-[#525C6B]">
+              Número do build (versionCode)
+            </dt>
+            <dd className="mt-1 font-display-condensed text-3xl text-[#111827] tabular-nums">
               {APP_VERSION_CODE}
             </dd>
           </div>
           <div>
-            <dt className="text-xs text-[#5E5B52]">Identificador do pacote Android</dt>
-            <dd className="mt-1 font-mono text-base font-medium text-[#1B3B2F]">
+            <dt className="text-xs font-light text-[#525C6B]">
+              Identificador do pacote Android
+            </dt>
+            <dd className="mt-1 font-mono text-sm font-medium text-[#0F3D34]">
               {APP_PACKAGE_ID}
             </dd>
           </div>
         </dl>
       </div>
 
-      <div className="mt-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-12 items-start">
+      <div className="mt-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] gap-10 items-start">
         {/* Left: GitHub Link Input + Update Status & APK Download */}
         <section aria-labelledby="github-update-heading" className="space-y-7">
-          <div className="bg-white border border-[#E5E1D8] rounded-md p-6 sm:p-8">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-8 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
             <h2
               id="github-update-heading"
-              className="font-serif text-2xl font-medium text-[#1C1B18]"
+              className="font-display-condensed text-3xl text-[#111827]"
             >
               Link do repositório no GitHub
             </h2>
-            <p className="mt-2 text-sm text-[#5E5B52] leading-relaxed">
+            <p className="mt-2 text-sm font-light text-[#525C6B] leading-relaxed">
               Cole o endereço do repositório onde você subiu o projeto (o endereço fica
               salvo automaticamente neste dispositivo).
             </p>
@@ -182,7 +188,7 @@ export function UpdateView() {
               <div>
                 <label
                   htmlFor="github-repo-input"
-                  className="block text-xs font-medium text-[#1C1B18] mb-1.5"
+                  className="block text-xs font-bold text-[#111827] mb-1.5"
                 >
                   Endereço do repositório (https://github.com/usuario/repositorio)
                 </label>
@@ -192,7 +198,7 @@ export function UpdateView() {
                   value={repoInput}
                   onChange={(e) => setRepoInput(e.target.value)}
                   placeholder="https://github.com/seu-usuario/oratorio"
-                  className="w-full rounded-md bg-[#F9F8F4] border border-[#E5E1D8] px-3.5 py-2.5 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] min-h-[44px]"
+                  className="w-full rounded-xl bg-[#FAFAFA] border border-[#E5E7EB] px-3.5 py-2.5 text-sm font-light text-[#111827] placeholder:text-[#7B8494] focus:bg-white focus:border-[#0F3D34] min-h-[44px]"
                 />
               </div>
 
@@ -200,7 +206,7 @@ export function UpdateView() {
                 <button
                   type="submit"
                   disabled={checking}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[#F9F8F4] bg-[#1B3B2F] rounded-md hover:bg-[#142D24] disabled:opacity-50 transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[#0F3D34] rounded-lg hover:bg-[#0A2C25] disabled:opacity-50 transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
                 >
                   {checking ? (
                     <>
@@ -220,7 +226,7 @@ export function UpdateView() {
             {error && (
               <div
                 role="alert"
-                className="mt-5 p-4 rounded-md bg-[#FDF2F2] border border-[#EBCACA] text-sm text-[#7F1D1D] flex items-start gap-2.5"
+                className="mt-5 p-4 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-medium text-[#991B1B] flex items-start gap-2.5"
               >
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{error}</span>
@@ -230,10 +236,10 @@ export function UpdateView() {
 
           {/* Update check result */}
           {result && (
-            <div className="bg-white border border-[#E5E1D8] rounded-md p-6 sm:p-8 space-y-5">
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#E5E1D8]">
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-8 space-y-5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#E5E7EB]">
                 <div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#5E5B52]">
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-light text-[#525C6B]">
                     <span>{result.repoFullName}</span>
                     {result.publishedAt && (
                       <>
@@ -250,36 +256,35 @@ export function UpdateView() {
                       </>
                     )}
                   </div>
-                  <h3 className="mt-1.5 font-serif text-2xl sm:text-3xl font-medium text-[#1C1B18]">
+                  <h3 className="mt-1.5 font-display-condensed text-3xl text-[#111827]">
                     {result.releaseName}
                   </h3>
                 </div>
 
-                <div className="text-xs font-medium flex items-center gap-1.5">
+                <div className="text-xs font-bold flex items-center gap-1.5">
                   {versionStatus === "update_available" ? (
-                    <span className="inline-flex items-center gap-1.5 text-[#1B3B2F]">
+                    <span className="inline-flex items-center gap-1.5 text-[#0F3D34]">
                       <Download className="w-4 h-4" />
                       Nova versão disponível (v{result.versionName})
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[#5E5B52]">
-                      <CheckCircle2 className="w-4 h-4 text-[#1B3B2F]" />
+                    <span className="inline-flex items-center gap-1.5 text-[#525C6B]">
+                      <CheckCircle2 className="w-4 h-4 text-[#0F3D34]" />
                       Você já está na versão mais recente
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* In-place update compatibility info */}
-              <div className="p-4 rounded-md bg-[#F2EFE8] text-sm text-[#1C1B18] flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 text-[#1B3B2F] shrink-0 mt-0.5" />
+              <div className="p-4 rounded-xl bg-[#F2F4F7] text-sm text-[#111827] flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 text-[#0F3D34] shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium">
+                  <p className="font-bold text-xs sm:text-sm">
                     {result.signedRelease
                       ? "Atualização direta sem desinstalar"
                       : "Release gerada em modo debug temporário"}
                   </p>
-                  <p className="mt-1 text-xs text-[#5E5B52] leading-relaxed">
+                  <p className="mt-1 text-xs font-light text-[#525C6B] leading-relaxed">
                     {result.signedRelease
                       ? `Este APK foi compilado com assinatura permanente e pacote ${APP_PACKAGE_ID}. Ao tocar no arquivo baixado no Android, ele atualiza sobre o app existente sem perder suas orações salvas.`
                       : "Para que o Android permita atualizar sem desinstalar em todas as próximas versões, configure os 4 secrets da keystore no GitHub conforme o guia ao lado."}
@@ -287,10 +292,9 @@ export function UpdateView() {
                 </div>
               </div>
 
-              {/* APK Download Action */}
               {result.apkAsset && safeApkUrl ? (
                 <div className="pt-2 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#5E5B52]">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#525C6B]">
                     <span className="font-mono">{result.apkAsset.name}</span>
                     <span className="font-mono tabular-nums">
                       {formatMegabytes(result.apkAsset.sizeBytes)}
@@ -302,7 +306,7 @@ export function UpdateView() {
                       href={safeApkUrl}
                       download={result.apkAsset.name}
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-3 text-sm font-medium text-[#F9F8F4] bg-[#1B3B2F] rounded-md hover:bg-[#142D24] transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
+                      className="inline-flex items-center gap-2 px-5 py-3 text-sm font-bold text-white bg-[#0F3D34] rounded-lg hover:bg-[#0A2C25] transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
                     >
                       <Download className="w-4 h-4" />
                       Baixar e atualizar APK
@@ -312,7 +316,7 @@ export function UpdateView() {
                       <a
                         href={safeReleaseUrl}
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-[#5E5B52] hover:text-[#1C1B18] border border-[#E5E1D8] rounded-md transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
+                        className="inline-flex items-center gap-1.5 px-4 py-3 text-sm font-medium text-[#525C6B] hover:text-[#111827] border border-[#E5E7EB] rounded-lg transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
                       >
                         <ExternalLink className="w-4 h-4" />
                         Ver release no GitHub
@@ -321,18 +325,18 @@ export function UpdateView() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-[#5E5B52]">
-                  Esta release ainda não possui um arquivo <span className="font-mono">.apk</span> anexado.
-                  Aguarde a conclusão da GitHub Action e clique em verificar novamente.
+                <p className="text-sm font-light text-[#525C6B]">
+                  Esta release ainda não possui um arquivo <span className="font-mono">.apk</span>{" "}
+                  anexado. Aguarde a conclusão da GitHub Action e clique em verificar novamente.
                 </p>
               )}
 
               {result.releaseNotes && (
-                <div className="pt-4 border-t border-[#E5E1D8]">
-                  <p className="text-xs uppercase tracking-[0.12em] text-[#5E5B52] mb-2">
+                <div className="pt-4 border-t border-[#E5E7EB]">
+                  <p className="text-xs font-bold text-[#111827] mb-2">
                     Notas desta versão
                   </p>
-                  <pre className="whitespace-pre-wrap font-sans text-xs text-[#5E5B52] leading-relaxed">
+                  <pre className="whitespace-pre-wrap font-sans text-xs font-light text-[#525C6B] leading-relaxed">
                     {result.releaseNotes}
                   </pre>
                 </div>
@@ -341,13 +345,13 @@ export function UpdateView() {
           )}
 
           {/* Optional Backend Server Connection for Android APK */}
-          <div className="bg-white border border-[#E5E1D8] rounded-md p-6 sm:p-8">
-            <h2 className="font-serif text-2xl font-medium text-[#1C1B18]">
+          <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 sm:p-8 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+            <h2 className="font-display-condensed text-3xl text-[#111827]">
               Servidor do aplicativo no Android (opcional)
             </h2>
-            <p className="mt-2 text-sm text-[#5E5B52] leading-relaxed">
+            <p className="mt-2 text-sm font-light text-[#525C6B] leading-relaxed">
               Sem servidor configurado, o APK funciona normalmente em{" "}
-              <strong>modo offline no celular</strong>. Se quiser usar a IA online no
+              <strong className="font-bold text-[#111827]">modo offline no celular</strong>. Se quiser usar a IA online no
               APK, cole abaixo o endereço <span className="font-mono text-xs">https://</span>{" "}
               onde seu servidor do Oratório está hospedado.
             </p>
@@ -363,12 +367,12 @@ export function UpdateView() {
                 }}
                 placeholder="https://seu-oratorio.run.app (opcional)"
                 aria-label="Endereço HTTPS do servidor do Oratório"
-                className="w-full rounded-md bg-[#F9F8F4] border border-[#E5E1D8] px-3.5 py-2.5 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] min-h-[44px]"
+                className="w-full rounded-xl bg-[#FAFAFA] border border-[#E5E7EB] px-3.5 py-2.5 text-sm font-light text-[#111827] placeholder:text-[#7B8494] focus:bg-white focus:border-[#0F3D34] min-h-[44px]"
               />
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-medium text-[#F9F8F4] bg-[#1B3B2F] rounded-md hover:bg-[#142D24] transition-colors whitespace-nowrap min-h-[38px]"
+                  className="px-4 py-2 text-xs font-bold text-white bg-[#0F3D34] rounded-lg hover:bg-[#0A2C25] transition-colors whitespace-nowrap min-h-[38px]"
                 >
                   Salvar configuração
                 </button>
@@ -381,7 +385,7 @@ export function UpdateView() {
                       setServerError(null);
                       setServerMsg("Modo offline restaurado no aparelho.");
                     }}
-                    className="text-xs text-[#5E5B52] hover:text-[#1C1B18] whitespace-nowrap"
+                    className="text-xs font-medium text-[#525C6B] hover:text-[#111827] whitespace-nowrap"
                   >
                     Usar apenas offline
                   </button>
@@ -390,53 +394,53 @@ export function UpdateView() {
             </form>
 
             {serverError && (
-              <p role="alert" className="mt-3 text-xs text-[#7F1D1D]">
+              <p role="alert" className="mt-3 text-xs font-medium text-[#991B1B]">
                 {serverError}
               </p>
             )}
             {serverMsg && (
-              <p className="mt-3 text-xs text-[#1B3B2F] font-medium">{serverMsg}</p>
+              <p className="mt-3 text-xs text-[#0F3D34] font-bold">{serverMsg}</p>
             )}
           </div>
         </section>
 
         {/* Right Rail: Permanent Signing Guide for Uninstall-Free Updates */}
-        <aside className="lg:border-l lg:border-[#E5E1D8] lg:pl-9 space-y-6">
+        <aside className="lg:border-l lg:border-[#E5E7EB] lg:pl-9 space-y-6">
           <div>
-            <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-2">
+            <p className="text-xs font-bold text-[#0F3D34] mb-1.5">
               Configuração no GitHub
             </p>
-            <h2 className="font-serif text-2xl font-medium text-[#1C1B18]">
+            <h2 className="font-display-condensed text-3xl text-[#111827]">
               Como funciona a atualização sem desinstalar
             </h2>
-            <p className="mt-2 text-sm text-[#5E5B52] leading-relaxed">
+            <p className="mt-2 text-sm font-light text-[#525C6B] leading-relaxed">
               O projeto já inclui a GitHub Action em{" "}
-              <span className="font-mono text-xs text-[#1C1B18]">
+              <span className="font-mono text-xs text-[#111827]">
                 .github/workflows/build-android-apk.yml
               </span>
               . Toda vez que você subir alterações para o GitHub, um novo APK com{" "}
-              <span className="font-mono text-xs text-[#1C1B18]">versionCode</span>{" "}
+              <span className="font-mono text-xs text-[#111827]">versionCode</span>{" "}
               crescente é gerado e publicado em Releases.
             </p>
           </div>
 
-          <div className="pt-5 border-t border-[#E5E1D8] space-y-3">
-            <h3 className="text-sm font-semibold text-[#1C1B18]">
+          <div className="pt-5 border-t border-[#E5E7EB] space-y-3">
+            <h3 className="text-sm font-bold text-[#111827]">
               01. Gere sua chave permanente uma única vez
             </h3>
-            <p className="text-xs text-[#5E5B52] leading-relaxed">
+            <p className="text-xs font-light text-[#525C6B] leading-relaxed">
               O Android exige a mesma assinatura criptográfica para instalar uma
               atualização sobre o app original. Gere o arquivo localmente (nunca envie
               o arquivo .keystore para o Git):
             </p>
-            <div className="p-3 bg-[#F2EFE8] rounded-md">
-              <code className="block font-mono text-[11px] text-[#1C1B18] break-all leading-relaxed">
+            <div className="p-3.5 bg-[#F2F4F7] rounded-xl">
+              <code className="block font-mono text-[11px] text-[#111827] break-all leading-relaxed">
                 {KEYTOOL_CMD}
               </code>
               <button
                 type="button"
                 onClick={handleCopyKeytool}
-                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium text-[#1B3B2F] hover:underline underline-offset-4"
+                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-bold text-[#0F3D34] hover:underline underline-offset-4"
               >
                 {copiedCmd ? (
                   <>
@@ -453,33 +457,33 @@ export function UpdateView() {
             </div>
           </div>
 
-          <div className="pt-5 border-t border-[#E5E1D8] space-y-3">
-            <h3 className="text-sm font-semibold text-[#1C1B18]">
+          <div className="pt-5 border-t border-[#E5E7EB] space-y-3">
+            <h3 className="text-sm font-bold text-[#111827]">
               02. Cadastre os 4 Secrets no GitHub
             </h3>
-            <p className="text-xs text-[#5E5B52] leading-relaxed">
-              Em <strong>Settings → Secrets and variables → Actions</strong> do seu
+            <p className="text-xs font-light text-[#525C6B] leading-relaxed">
+              Em <strong className="font-bold text-[#111827]">Settings → Secrets and variables → Actions</strong> do seu
               repositório, adicione:
             </p>
-            <dl className="divide-y divide-[#E5E1D8] border-y border-[#E5E1D8]">
+            <dl className="divide-y divide-[#E5E7EB] border-y border-[#E5E7EB]">
               {GITHUB_SECRETS.map((sec) => (
                 <div key={sec.name} className="py-2.5">
-                  <dt className="font-mono text-xs font-medium text-[#1B3B2F]">
+                  <dt className="font-mono text-xs font-medium text-[#0F3D34]">
                     {sec.name}
                   </dt>
-                  <dd className="text-xs text-[#5E5B52] mt-0.5">{sec.desc}</dd>
+                  <dd className="text-xs font-light text-[#525C6B] mt-0.5">{sec.desc}</dd>
                 </div>
               ))}
             </dl>
           </div>
 
-          <div className="pt-4 border-t border-[#E5E1D8]">
-            <h3 className="text-sm font-semibold text-[#1C1B18]">
+          <div className="pt-4 border-t border-[#E5E7EB]">
+            <h3 className="text-sm font-bold text-[#111827]">
               03. Atualize direto pelo celular
             </h3>
-            <p className="mt-1.5 text-xs text-[#5E5B52] leading-relaxed">
+            <p className="mt-1.5 text-xs font-light text-[#525C6B] leading-relaxed">
               Depois que a Action publicar a release, cole o link do repositório aqui,
-              toque em <strong>Baixar e atualizar APK</strong> e abra o arquivo
+              toque em <strong className="font-bold text-[#111827]">Baixar e atualizar APK</strong> e abra o arquivo
               baixado. O Android instalará a nova versão mantendo seu histórico intacto.
             </p>
           </div>

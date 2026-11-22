@@ -54,12 +54,19 @@ export interface AnchorVerse {
   reflection: string;
 }
 
+export interface OrganizedSummaryItem {
+  label: string;
+  summary: string;
+}
+
 export interface ComposedPrayer {
   title: string;
+  organizedSummary?: OrganizedSummaryItem[];
   prayerParagraphs: string[];
   structureNotes: StructureNote[];
   anchorVerse: AnchorVerse;
   faithStep: string;
+  modelUsed?: string;
 }
 
 export interface SavedPrayerEntry {
@@ -68,6 +75,7 @@ export interface SavedPrayerEntry {
   title: string;
   themeTitle?: string;
   heart: HeartInput;
+  organizedSummary?: OrganizedSummaryItem[];
   prayerParagraphs: string[];
   structureNotes: StructureNote[];
   anchorVerse: AnchorVerse;

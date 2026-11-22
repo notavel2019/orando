@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -28,6 +29,99 @@ import {
   generateOfflineQuestions,
 } from "../utils/offlinePrayerGuide";
 
+export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | "done";
+
+const TOTAL_STEPS = 8;
+
+interface HeartStepConfig {
+  step: 1 | 2 | 3 | 4 | 5;
+  field: keyof HeartInput;
+  shortLabel: string;
+  headline: string;
+  subtitle: string;
+  placeholder: string;
+  voicePrompt: string;
+  suggestions: string[];
+}
+
+const HEART_STEPS: HeartStepConfig[] = [
+  {
+    step: 1,
+    field: "feelings",
+    shortLabel: "Sentimentos de hoje",
+    headline: "Como está o seu coração agora?",
+    subtitle:
+      "Comece trazendo com simplicidade o que você tem sentido por dentro — paz, cansaço, gratidão, alegria ou inquietação.",
+    placeholder: "Ex.: sinto gratidão pela minha família, mas também um cansaço acumulado desta semana...",
+    voicePrompt: "Fale seus sentimentos de hoje...",
+    suggestions: [
+      "Cansaço e necessidade de descanso",
+      "Inquietação diante de uma decisão",
+      "Gratidão pelo cuidado de Deus",
+    ],
+  },
+  {
+    step: 2,
+    field: "desires",
+    shortLabel: "Desejos e sonhos",
+    headline: "Quais são seus desejos, sonhos e pretensões?",
+    subtitle:
+      "Apresente diante de Deus aquilo que você sonha viver, construir ou alcançar, buscando alinhar seus planos à vontade dEle.",
+    placeholder: "Ex.: desejo sabedoria no trabalho, novos projetos que abençoem minha casa e mais constância na fé...",
+    voicePrompt: "Fale seus desejos e sonhos...",
+    suggestions: [
+      "Direção para um novo projeto",
+      "Paz e unidade dentro da família",
+      "Mais constância na vida de oração",
+    ],
+  },
+  {
+    step: 3,
+    field: "fears",
+    shortLabel: "Medos e temores",
+    headline: "O que você teme ou tem tirado sua paz?",
+    subtitle:
+      "Nomeie sem reservas as incertezas, preocupações ou receios que você deseja depositar nas mãos do Pai.",
+    placeholder: "Ex.: tenho medo de tomar uma escolha errada ou não dar conta das responsabilidades...",
+    voicePrompt: "Fale o que você teme ou tem medo...",
+    suggestions: [
+      "Medo de escolher o caminho errado",
+      "Incerteza sobre o futuro financeiro",
+      "Preocupação com alguém que amo",
+    ],
+  },
+  {
+    step: 4,
+    field: "courage",
+    shortLabel: "Onde precisa de coragem",
+    headline: "Onde você precisa de coragem hoje?",
+    subtitle:
+      "Conte qual atitude, conversa difícil ou passo de fé exige firmeza e confiança no Senhor neste momento.",
+    placeholder: "Ex.: preciso de coragem para perdoar, iniciar uma conversa sincera ou dar um passo de obediência...",
+    voicePrompt: "Fale onde você precisa de coragem...",
+    suggestions: [
+      "Coragem para perdoar e recomeçar",
+      "Firmeza para dar um passo de fé",
+      "Mansidão para uma conversa difícil",
+    ],
+  },
+  {
+    step: 5,
+    field: "freeText",
+    shortLabel: "Palavra livre ao Pai",
+    headline: "Há mais algo que deseja dizer a Deus?",
+    subtitle:
+      "Se quiser, acrescente um pedido por alguém especial, um agradecimento ou qualquer detalhe livre (opcional).",
+    placeholder: "Escreva ou fale livremente como conversaria com um amigo fiel...",
+    voicePrompt: "Fale livremente o que está no seu coração...",
+    suggestions: [
+      "Interceder pela saúde da minha família",
+      "Agradecer pelas misericórdias de hoje",
+      "Pedir renovo espiritual nesta semana",
+    ],
+  },
+];
+
 interface PrayerBuilderViewProps {
   todayTheme: DailyBiblicalTheme;
   selectedTheme: DailyBiblicalTheme | null;
@@ -35,8 +129,8 @@ interface PrayerBuilderViewProps {
   onSelectTodayTheme: () => void;
   heart: HeartInput;
   onHeartChange: (next: HeartInput) => void;
-  step: 1 | 2 | 3;
-  onStepChange: (step: 1 | 2 | 3) => void;
+  wizardStep: WizardStep;
+  onWizardStepChange: (step: WizardStep) => void;
   questionsData: QuestionsResponse | null;
   onQuestionsDataChange: (data: QuestionsResponse | null) => void;
   answers: Record<string, string>;
@@ -49,33 +143,6 @@ interface PrayerBuilderViewProps {
   onResetAll: () => void;
 }
 
-const STARTER_PROMPTS: { label: string; patch: Partial<HeartInput> }[] = [
-  {
-    label: "Ansiedade diante de uma decisão",
-    patch: {
-      feelings: "Inquietação e peso no coração ao pensar no futuro.",
-      fears: "Medo de escolher o caminho errado e decepcionar quem amo.",
-      courage: "Coragem para confiar no tempo de Deus e dar o passo certo.",
-    },
-  },
-  {
-    label: "Cansaço e busca por renovo",
-    patch: {
-      feelings: "Cansaço acumulado, mas ainda com gratidão por estar de pé.",
-      desires: "Reencontrar descanso verdadeiro e leveza na rotina.",
-      fears: "Receio de perder o ânimo nas responsabilidades diárias.",
-    },
-  },
-  {
-    label: "Coragem para perdoar e recomeçar",
-    patch: {
-      feelings: "Mágoa misturada com vontade sincera de ter paz interior.",
-      desires: "Que Deus cure meu coração e restaure a mansidão nas minhas palavras.",
-      courage: "Coragem para soltar o ressentimento e agir com amor cristão.",
-    },
-  },
-];
-
 export function PrayerBuilderView({
   todayTheme,
   selectedTheme,
@@ -83,8 +150,8 @@ export function PrayerBuilderView({
   onSelectTodayTheme,
   heart,
   onHeartChange,
-  step,
-  onStepChange,
+  wizardStep,
+  onWizardStepChange,
   questionsData,
   onQuestionsDataChange,
   answers,
@@ -132,10 +199,6 @@ export function PrayerBuilderView({
 
   const speech = useSpeechInput<string>(handleVoiceTranscript);
 
-  const toggleVoiceForField = (fieldKey: string, promptLabel: string) => {
-    speech.toggleField(fieldKey, promptLabel);
-  };
-
   const hasHeartContent = Boolean(
     heart.feelings.trim() ||
       heart.desires.trim() ||
@@ -146,7 +209,9 @@ export function PrayerBuilderView({
 
   const handleGenerateQuestions = async () => {
     if (!hasHeartContent) {
-      setError("Compartilhe ao menos um sentimento, desejo, medo ou relato livre para continuarmos.");
+      setError(
+        "Compartilhe ao menos um sentimento, desejo, medo ou palavra em um dos passos antes de continuar."
+      );
       return;
     }
     if (speech.isListening) {
@@ -165,7 +230,7 @@ export function PrayerBuilderView({
         setUsingOfflineMode(true);
         onQuestionsDataChange(offline);
         onAnswersChange({});
-        onStepChange(2);
+        onWizardStepChange(6);
         return;
       }
 
@@ -183,7 +248,7 @@ export function PrayerBuilderView({
         setUsingOfflineMode(true);
         onQuestionsDataChange(offline);
         onAnswersChange({});
-        onStepChange(2);
+        onWizardStepChange(6);
         return;
       }
 
@@ -194,7 +259,7 @@ export function PrayerBuilderView({
       setUsingOfflineMode(false);
       onQuestionsDataChange(data as QuestionsResponse);
       onAnswersChange({});
-      onStepChange(2);
+      onWizardStepChange(6);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao conectar com o servidor.");
     } finally {
@@ -203,6 +268,9 @@ export function PrayerBuilderView({
   };
 
   const handleComposePrayer = async () => {
+    if (speech.isListening) {
+      speech.stop();
+    }
     setError(null);
     setLoading(true);
     const formattedAnswers = (questionsData?.questions ?? [])
@@ -220,7 +288,7 @@ export function PrayerBuilderView({
         const offlinePrayer = composeOfflinePrayer(heart, formattedAnswers, themeContext);
         setUsingOfflineMode(true);
         onComposedPrayerChange(offlinePrayer);
-        onStepChange(3);
+        onWizardStepChange("done");
         return;
       }
 
@@ -238,7 +306,7 @@ export function PrayerBuilderView({
         const offlinePrayer = composeOfflinePrayer(heart, formattedAnswers, themeContext);
         setUsingOfflineMode(true);
         onComposedPrayerChange(offlinePrayer);
-        onStepChange(3);
+        onWizardStepChange("done");
         return;
       }
 
@@ -248,11 +316,49 @@ export function PrayerBuilderView({
       }
       setUsingOfflineMode(false);
       onComposedPrayerChange(data as ComposedPrayer);
-      onStepChange(3);
+      onWizardStepChange("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao montar a oração.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNextStep = () => {
+    setError(null);
+    if (speech.isListening) {
+      speech.stop();
+    }
+    if (wizardStep === 1) onWizardStepChange(2);
+    else if (wizardStep === 2) onWizardStepChange(3);
+    else if (wizardStep === 3) onWizardStepChange(4);
+    else if (wizardStep === 4) onWizardStepChange(5);
+    else if (wizardStep === 5) {
+      void handleGenerateQuestions();
+    } else if (wizardStep === 6) {
+      if ((questionsData?.questions.length ?? 0) >= 2) {
+        onWizardStepChange(7);
+      } else {
+        void handleComposePrayer();
+      }
+    } else if (wizardStep === 7) {
+      if ((questionsData?.questions.length ?? 0) >= 3) {
+        onWizardStepChange(8);
+      } else {
+        void handleComposePrayer();
+      }
+    } else if (wizardStep === 8) {
+      void handleComposePrayer();
+    }
+  };
+
+  const handlePrevStep = () => {
+    setError(null);
+    if (speech.isListening) {
+      speech.stop();
+    }
+    if (typeof wizardStep === "number" && wizardStep > 1) {
+      onWizardStepChange((wizardStep - 1) as WizardStep);
     }
   };
 
@@ -275,87 +381,69 @@ export function PrayerBuilderView({
     }
   };
 
-  const stepLabels = [
-    { num: 1 as const, label: "01. Abrir o coração" },
-    { num: 2 as const, label: "02. Perguntas reflexivas" },
-    { num: 3 as const, label: "03. Oração estruturada" },
-  ];
+  const currentHeartStep =
+    typeof wizardStep === "number" && wizardStep <= 5
+      ? HEART_STEPS[wizardStep - 1]
+      : null;
+
+  const currentQuestionIndex =
+    typeof wizardStep === "number" && wizardStep >= 6 ? wizardStep - 6 : -1;
+  const currentQuestion =
+    currentQuestionIndex >= 0 && questionsData
+      ? questionsData.questions[currentQuestionIndex] ?? null
+      : null;
+
+  const numericStep = wizardStep === "done" ? TOTAL_STEPS : wizardStep;
+  const progressRatio = numericStep / TOTAL_STEPS;
+
+  const currentStepTitle = currentHeartStep
+    ? currentHeartStep.shortLabel
+    : currentQuestion
+      ? `Reflexão · ${currentQuestion.focus}`
+      : "Oração concluída";
+
+  const activeVoiceKey = currentHeartStep
+    ? currentHeartStep.field
+    : currentQuestion
+      ? `answer:${currentQuestion.id}`
+      : "";
+  const isCurrentListening =
+    speech.isListening && speech.activeField === activeVoiceKey;
 
   return (
-    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 lg:py-14">
-      {/* Editorial Step Indicator */}
-      <div className="mb-10 pb-5 border-b border-[#E5E1D8] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-medium tracking-wide">
-          {stepLabels.map((s, idx) => {
-            const canClick =
-              s.num === 1 ||
-              (s.num === 2 && Boolean(questionsData)) ||
-              (s.num === 3 && Boolean(composedPrayer));
-            const isCurrent = step === s.num;
-            return (
-              <div key={s.num} className="flex items-center gap-5">
-                <button
-                  type="button"
-                  disabled={!canClick}
-                  onClick={() => canClick && onStepChange(s.num)}
-                  className={`transition-colors whitespace-nowrap shrink-0 ${
-                    isCurrent
-                      ? "text-[#1B3B2F] font-semibold"
-                      : canClick
-                        ? "text-[#5E5B52] hover:text-[#1C1B18]"
-                        : "text-[#8A8578]/70 cursor-default"
-                  }`}
-                >
-                  {s.label}
-                </button>
-                {idx < stepLabels.length - 1 && (
-                  <span aria-hidden="true" className="text-[#D6CEBE]">
-                    /
-                  </span>
-                )}
-              </div>
-            );
-          })}
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-8 lg:py-12">
+      {/* Subtle top context strip */}
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 text-xs text-[#525C6B]">
+        <div className="flex items-center gap-2 font-light">
+          <span className="font-bold text-[#0F3D34]">Guia de Oração</span>
+          <span aria-hidden="true">·</span>
+          <span className="capitalize">{formatPortugueseDate()}</span>
         </div>
-
-        <p className="text-xs text-[#5E5B52] capitalize">
-          {formatPortugueseDate()}
+        <p className="font-light text-[#7B8494]">
+          Um auxílio para fortalecer sua oração, nunca para substituí-la
         </p>
       </div>
 
-      {/* STEP 1: OPEN YOUR HEART */}
-      {step === 1 && (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-12 items-start">
-          <section aria-labelledby="heart-heading">
-            <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-3">
-              Guia de Oração Pessoal
-            </p>
-            <h1
-              id="heart-heading"
-              className="font-serif text-4xl sm:text-5xl font-medium tracking-tight text-[#1C1B18] leading-[1.12] max-w-2xl"
-            >
-              Traga com verdade o que está no seu coração hoje.
-            </h1>
-            <p className="mt-4 text-base text-[#5E5B52] leading-relaxed max-w-2xl">
-              Compartilhe seus sentimentos, desejos, pretensões, medos e onde busca coragem.
-              Depois, faremos três perguntas breves para ajudar você a organizar uma oração
-              genuína e alinhada aos propósitos de Deus.
-            </p>
-
+      {/* WIZARD STEPS 1 TO 8 */}
+      {wizardStep !== "done" && (
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-10 items-start">
+          {/* Primary Modern Step Card */}
+          <section
+            aria-label={`Passo ${numericStep} de ${TOTAL_STEPS}`}
+            className="bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col"
+          >
             {selectedTheme && (
-              <div className="mt-6 p-4 bg-[#F2EFE8] border border-[#E5E1D8] rounded-md flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs text-[#5E5B52]">
-                    Tema bíblico selecionado · {selectedTheme.verseReference}
-                  </p>
-                  <p className="mt-1 font-serif text-lg font-medium text-[#1C1B18]">
-                    {selectedTheme.title}
-                  </p>
+              <div className="px-6 sm:px-9 py-3.5 bg-[#F2F4F7] border-b border-[#E5E7EB] flex items-center justify-between gap-4">
+                <div className="min-w-0 text-xs text-[#525C6B]">
+                  <span className="font-bold text-[#0F3D34]">Tema bíblico:</span>{" "}
+                  <span className="font-light">{selectedTheme.title}</span>{" "}
+                  <span aria-hidden="true">·</span>{" "}
+                  <span className="font-medium">{selectedTheme.verseReference}</span>
                 </div>
                 <button
                   type="button"
                   onClick={onClearTheme}
-                  className="p-1.5 text-[#5E5B52] hover:text-[#1C1B18] rounded transition-colors shrink-0"
+                  className="p-1 text-[#525C6B] hover:text-[#111827] rounded transition-colors shrink-0"
                   aria-label="Remover tema selecionado"
                 >
                   <X className="w-4 h-4" />
@@ -363,35 +451,206 @@ export function PrayerBuilderView({
               </div>
             )}
 
-            {/* Quick starters for users who don't know where to begin */}
-            <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#5E5B52]">
-              <span className="text-[#8A8578]">Não sabe por onde começar?</span>
-              {STARTER_PROMPTS.map((starter) => (
-                <button
-                  key={starter.label}
-                  type="button"
-                  onClick={() =>
-                    onHeartChange({
-                      ...heart,
-                      ...starter.patch,
-                    })
-                  }
-                  className="underline decoration-[#D6CEBE] underline-offset-4 hover:text-[#1B3B2F] hover:decoration-[#1B3B2F] transition-colors whitespace-nowrap"
+            {/* Animated Step Body */}
+            <div className="p-6 sm:p-10 min-h-[390px] flex flex-col justify-between">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={String(wizardStep)}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                 >
-                  {starter.label}
-                </button>
-              ))}
-            </div>
+                  {/* Step 1-5: Heart & Dreams Inputs */}
+                  {currentHeartStep && (
+                    <div>
+                      <p className="text-xs font-bold tracking-wide text-[#0F3D34] mb-2">
+                        Passo {currentHeartStep.step} · {currentHeartStep.shortLabel}
+                      </p>
 
-            {/* Live voice status or error notice */}
-            {(speech.isListening || speech.isTranscribing || speech.errorMessage) && (
-              <div className="mt-6">
+                      <h1 className="font-display-condensed text-4xl sm:text-[2.75rem] leading-[1.06] text-[#111827]">
+                        {currentHeartStep.headline}
+                      </h1>
+
+                      <p className="mt-3 text-sm sm:text-base font-light text-[#525C6B] leading-relaxed max-w-2xl">
+                        {currentHeartStep.subtitle}
+                      </p>
+
+                      {/* Voice button + label row */}
+                      <div className="mt-7 flex items-center justify-between gap-3 mb-2">
+                        <label
+                          htmlFor={`step-input-${currentHeartStep.field}`}
+                          className="text-xs font-bold text-[#111827]"
+                        >
+                          Sua resposta
+                        </label>
+                        {speech.isSupported && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              speech.toggleField(
+                                currentHeartStep.field,
+                                currentHeartStep.voicePrompt
+                              )
+                            }
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors whitespace-nowrap min-h-[36px] ${
+                              isCurrentListening
+                                ? "bg-[#0F3D34] text-white font-bold"
+                                : "bg-[#F2F4F7] text-[#111827] font-medium hover:bg-[#E5E7EB]"
+                            }`}
+                          >
+                            {isCurrentListening ? (
+                              <>
+                                <MicOff className="w-3.5 h-3.5" />
+                                Parar voz
+                              </>
+                            ) : (
+                              <>
+                                <Mic className="w-3.5 h-3.5 text-[#0F3D34]" />
+                                Falar pelo microfone
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      <textarea
+                        id={`step-input-${currentHeartStep.field}`}
+                        rows={5}
+                        value={heart[currentHeartStep.field]}
+                        onChange={(e) =>
+                          onHeartChange({
+                            ...heart,
+                            [currentHeartStep.field]: e.target.value,
+                          })
+                        }
+                        onKeyDown={(e) => {
+                          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                            e.preventDefault();
+                            handleNextStep();
+                          }
+                        }}
+                        placeholder={currentHeartStep.placeholder}
+                        className="w-full rounded-xl bg-[#FAFAFA] border border-[#E5E7EB] px-4 py-3.5 text-base font-light text-[#111827] placeholder:text-[#7B8494] focus:bg-white focus:border-[#0F3D34] transition-colors resize-none leading-relaxed"
+                      />
+
+                      {/* Subtle unboxed inspiration links */}
+                      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-light text-[#525C6B]">
+                        <span className="font-medium text-[#7B8494]">Sugestões:</span>
+                        {currentHeartStep.suggestions.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => {
+                              const prev = heart[currentHeartStep.field].trim();
+                              onHeartChange({
+                                ...heart,
+                                [currentHeartStep.field]: prev
+                                  ? `${prev}. ${suggestion}`
+                                  : suggestion,
+                              });
+                            }}
+                            className="underline decoration-[#D1D5DB] underline-offset-4 hover:text-[#0F3D34] hover:decoration-[#0F3D34] transition-colors text-left"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 6-8: Personalized Reflective Questions */}
+                  {currentQuestion && questionsData && (
+                    <div>
+                      {currentQuestionIndex === 0 && (
+                        <p className="mb-5 pb-4 border-b border-[#E5E7EB] text-sm font-light italic text-[#525C6B] leading-relaxed">
+                          “{questionsData.acknowledgment}”
+                        </p>
+                      )}
+
+                      <p className="text-xs font-bold tracking-wide text-[#0F3D34] mb-2">
+                        Reflexão {currentQuestionIndex + 1} de{" "}
+                        {questionsData.questions.length} · {currentQuestion.focus}
+                      </p>
+
+                      <h1 className="font-display-condensed text-3xl sm:text-[2.5rem] leading-[1.08] text-[#111827]">
+                        {currentQuestion.question}
+                      </h1>
+
+                      <p className="mt-2.5 text-sm font-light text-[#525C6B]">
+                        {currentQuestion.hint}
+                      </p>
+
+                      <div className="mt-7 flex items-center justify-between gap-3 mb-2">
+                        <label
+                          htmlFor={`step-answer-${currentQuestion.id}`}
+                          className="text-xs font-bold text-[#111827]"
+                        >
+                          Sua reflexão{" "}
+                          <span className="font-light text-[#7B8494]">(opcional)</span>
+                        </label>
+                        {speech.isSupported && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              speech.toggleField(
+                                `answer:${currentQuestion.id}`,
+                                currentQuestion.question
+                              )
+                            }
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors whitespace-nowrap min-h-[36px] ${
+                              isCurrentListening
+                                ? "bg-[#0F3D34] text-white font-bold"
+                                : "bg-[#F2F4F7] text-[#111827] font-medium hover:bg-[#E5E7EB]"
+                            }`}
+                          >
+                            {isCurrentListening ? (
+                              <>
+                                <MicOff className="w-3.5 h-3.5" />
+                                Parar voz
+                              </>
+                            ) : (
+                              <>
+                                <Mic className="w-3.5 h-3.5 text-[#0F3D34]" />
+                                Responder por voz
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      <textarea
+                        id={`step-answer-${currentQuestion.id}`}
+                        rows={5}
+                        value={answers[currentQuestion.id] ?? ""}
+                        onChange={(e) =>
+                          onAnswersChange({
+                            ...answers,
+                            [currentQuestion.id]: e.target.value,
+                          })
+                        }
+                        onKeyDown={(e) => {
+                          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                            e.preventDefault();
+                            handleNextStep();
+                          }
+                        }}
+                        placeholder="Escreva ou fale sua resposta com sinceridade (ou avance em silêncio se preferir)..."
+                        className="w-full rounded-xl bg-[#FAFAFA] border border-[#E5E7EB] px-4 py-3.5 text-base font-light text-[#111827] placeholder:text-[#7B8494] focus:bg-white focus:border-[#0F3D34] transition-colors resize-none leading-relaxed"
+                      />
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Live Voice Status & Error Notices */}
+              <div className="mt-5 space-y-3">
                 {speech.isListening && (
-                  <div className="p-3.5 rounded-md bg-[#EBF1EE] border border-[#C8DBD2] text-sm text-[#1B3B2F] flex items-center justify-between gap-3">
+                  <div className="p-3.5 rounded-xl bg-[#EAF3F0] border border-[#C6DFD7] text-sm text-[#0F3D34] flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium">Ouvindo sua voz em português...</p>
+                      <p className="font-bold text-xs">Ouvindo sua voz em português...</p>
                       {speech.interimText && (
-                        <p className="mt-0.5 text-xs text-[#4C6459] truncate">
+                        <p className="mt-0.5 text-xs font-light truncate">
                           “{speech.interimText}”
                         </p>
                       )}
@@ -399,7 +658,7 @@ export function PrayerBuilderView({
                     <button
                       type="button"
                       onClick={speech.stop}
-                      className="px-3 py-1.5 text-xs font-medium bg-[#1B3B2F] text-[#F9F8F4] rounded whitespace-nowrap shrink-0"
+                      className="px-3 py-1.5 text-xs font-bold bg-[#0F3D34] text-white rounded-lg whitespace-nowrap shrink-0"
                     >
                       Concluir fala
                     </button>
@@ -407,8 +666,8 @@ export function PrayerBuilderView({
                 )}
 
                 {speech.isTranscribing && (
-                  <div className="p-3.5 rounded-md bg-[#F2EFE8] border border-[#E5E1D8] text-sm text-[#1C1B18] flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-[#1B3B2F]" />
+                  <div className="p-3.5 rounded-xl bg-[#F2F4F7] border border-[#E5E7EB] text-xs font-medium text-[#111827] flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#0F3D34]" />
                     <span>Transcrevendo o que você falou...</span>
                   </div>
                 )}
@@ -416,655 +675,387 @@ export function PrayerBuilderView({
                 {speech.errorMessage && (
                   <div
                     role="alert"
-                    className="p-3.5 rounded-md bg-[#FDF2F2] border border-[#EBCACA] text-sm text-[#7F1D1D] flex items-start justify-between gap-3"
+                    className="p-3.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs text-[#991B1B] flex items-start justify-between gap-3"
                   >
-                    <span>{speech.errorMessage}</span>
+                    <span className="font-light">{speech.errorMessage}</span>
                     <button
                       type="button"
                       onClick={speech.clearError}
                       aria-label="Fechar aviso"
-                      className="p-0.5 text-[#7F1D1D] shrink-0"
+                      className="p-0.5 text-[#991B1B] shrink-0"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* Structured dimensions directly honoring the audio prompt */}
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label
-                    htmlFor="field-feelings"
-                    className="text-sm font-medium text-[#1C1B18]"
+                {error && (
+                  <div
+                    role="alert"
+                    className="p-3.5 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-xs font-medium text-[#991B1B]"
                   >
-                    Sentimentos de hoje
-                  </label>
-                  {speech.isSupported && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleVoiceForField("feelings", "Fale seus sentimentos de hoje...")
-                      }
-                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
-                        speech.isListening && speech.activeField === "feelings"
-                          ? "text-[#1B3B2F] font-semibold"
-                          : "text-[#5E5B52] hover:text-[#1C1B18]"
-                      }`}
-                    >
-                      {speech.isListening && speech.activeField === "feelings" ? (
-                        <>
-                          <MicOff className="w-3.5 h-3.5" />
-                          Parar voz
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="w-3.5 h-3.5" />
-                          Falar
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-                <textarea
-                  id="field-feelings"
-                  rows={3}
-                  value={heart.feelings}
-                  onChange={(e) => onHeartChange({ ...heart, feelings: e.target.value })}
-                  placeholder="Ex.: gratidão pela família, cansaço no trabalho, inquietação..."
-                  className="w-full rounded-md bg-white border border-[#E5E1D8] px-3.5 py-3 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] transition-colors resize-none"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label
-                    htmlFor="field-desires"
-                    className="text-sm font-medium text-[#1C1B18]"
-                  >
-                    Desejos e pretensões
-                  </label>
-                  {speech.isSupported && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleVoiceForField("desires", "Fale seus desejos e pretensões...")
-                      }
-                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
-                        speech.isListening && speech.activeField === "desires"
-                          ? "text-[#1B3B2F] font-semibold"
-                          : "text-[#5E5B52] hover:text-[#1C1B18]"
-                      }`}
-                    >
-                      {speech.isListening && speech.activeField === "desires" ? (
-                        <>
-                          <MicOff className="w-3.5 h-3.5" />
-                          Parar voz
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="w-3.5 h-3.5" />
-                          Falar
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-                <textarea
-                  id="field-desires"
-                  rows={3}
-                  value={heart.desires}
-                  onChange={(e) => onHeartChange({ ...heart, desires: e.target.value })}
-                  placeholder="O que você deseja construir, alcançar ou apresentar diante de Deus?"
-                  className="w-full rounded-md bg-white border border-[#E5E1D8] px-3.5 py-3 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] transition-colors resize-none"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label
-                    htmlFor="field-fears"
-                    className="text-sm font-medium text-[#1C1B18]"
-                  >
-                    O que você teme ou tem medo
-                  </label>
-                  {speech.isSupported && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleVoiceForField("fears", "Fale o que você teme ou tem medo...")
-                      }
-                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
-                        speech.isListening && speech.activeField === "fears"
-                          ? "text-[#1B3B2F] font-semibold"
-                          : "text-[#5E5B52] hover:text-[#1C1B18]"
-                      }`}
-                    >
-                      {speech.isListening && speech.activeField === "fears" ? (
-                        <>
-                          <MicOff className="w-3.5 h-3.5" />
-                          Parar voz
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="w-3.5 h-3.5" />
-                          Falar
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-                <textarea
-                  id="field-fears"
-                  rows={3}
-                  value={heart.fears}
-                  onChange={(e) => onHeartChange({ ...heart, fears: e.target.value })}
-                  placeholder="Receios, incertezas ou pesos que têm roubado sua paz..."
-                  className="w-full rounded-md bg-white border border-[#E5E1D8] px-3.5 py-3 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] transition-colors resize-none"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label
-                    htmlFor="field-courage"
-                    className="text-sm font-medium text-[#1C1B18]"
-                  >
-                    Onde precisa de coragem
-                  </label>
-                  {speech.isSupported && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        toggleVoiceForField("courage", "Fale onde você precisa de coragem...")
-                      }
-                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
-                        speech.isListening && speech.activeField === "courage"
-                          ? "text-[#1B3B2F] font-semibold"
-                          : "text-[#5E5B52] hover:text-[#1C1B18]"
-                      }`}
-                    >
-                      {speech.isListening && speech.activeField === "courage" ? (
-                        <>
-                          <MicOff className="w-3.5 h-3.5" />
-                          Parar voz
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="w-3.5 h-3.5" />
-                          Falar
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-                <textarea
-                  id="field-courage"
-                  rows={3}
-                  value={heart.courage}
-                  onChange={(e) => onHeartChange({ ...heart, courage: e.target.value })}
-                  placeholder="Qual atitude, conversa ou passo de fé exige firmeza agora?"
-                  className="w-full rounded-md bg-white border border-[#E5E1D8] px-3.5 py-3 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] transition-colors resize-none"
-                />
+                    {error}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Free-form heart note */}
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-2">
-                <label
-                  htmlFor="field-free"
-                  className="text-sm font-medium text-[#1C1B18]"
+            {/* Bottom Progress Bar & Step Controls (1 de 8 ... 8 de 8) */}
+            <div className="border-t border-[#E5E7EB] bg-[#FAFAFA]">
+              <div className="h-1 w-full bg-[#E5E7EB] overflow-hidden">
+                <div
+                  className="h-full bg-[#0F3D34] origin-left transition-transform duration-300 ease-out"
+                  style={{ transform: `scaleX(${progressRatio})` }}
+                />
+              </div>
+
+              <div className="px-5 sm:px-9 py-4 flex items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  disabled={loading || numericStep <= 1}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-[#525C6B] hover:text-[#111827] disabled:opacity-30 disabled:cursor-default transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
                 >
-                  Ou escreva livremente o que quiser dizer a Deus{" "}
-                  <span className="font-normal text-[#8A8578]">(opcional)</span>
-                </label>
-                {speech.isSupported && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toggleVoiceForField("freeText", "Fale livremente o que está no seu coração...")
-                    }
-                    className={`inline-flex items-center gap-1.5 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
-                      speech.isListening && speech.activeField === "freeText"
-                        ? "text-[#1B3B2F] font-semibold"
-                        : "text-[#5E5B52] hover:text-[#1C1B18]"
-                    }`}
-                  >
-                    {speech.isListening && speech.activeField === "freeText" ? (
-                      <>
-                        <MicOff className="w-3.5 h-3.5" />
-                        Ouvindo — tocar para parar
-                      </>
-                    ) : (
-                      <>
-                        <Mic className="w-3.5 h-3.5" />
-                        Falar pelo microfone
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-              <textarea
-                id="field-free"
-                rows={4}
-                value={heart.freeText}
-                onChange={(e) => onHeartChange({ ...heart, freeText: e.target.value })}
-                placeholder="Fale como conversaria com um amigo fiel. Não precisa usar palavras difíceis..."
-                className="w-full rounded-md bg-white border border-[#E5E1D8] px-4 py-3 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] transition-colors"
-              />
-            </div>
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar
+                </button>
 
-            {error && (
-              <div
-                role="alert"
-                className="mt-5 p-3.5 rounded-md bg-[#FDF2F2] border border-[#EBCACA] text-sm text-[#7F1D1D]"
-              >
-                {error}
-              </div>
-            )}
+                {/* Explicit Bottom Step Progress Counter: 1 de 8, 2 de 8 ... 8 de 8 */}
+                <div className="text-center">
+                  <p className="font-bold text-sm text-[#111827] tabular-nums whitespace-nowrap">
+                    {numericStep} de {TOTAL_STEPS}
+                  </p>
+                  <p className="hidden sm:block text-[11px] font-light text-[#525C6B] truncate max-w-[200px]">
+                    {currentStepTitle}
+                  </p>
+                </div>
 
-            <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-              <p className="text-xs text-[#5E5B52]">
-                Suas reflexões ficam apenas no seu navegador e não são publicadas.
-              </p>
-              <button
-                type="button"
-                onClick={handleGenerateQuestions}
-                disabled={loading || !hasHeartContent}
-                className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#F9F8F4] bg-[#1B3B2F] rounded-md hover:bg-[#142D24] disabled:opacity-45 disabled:cursor-not-allowed transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Preparando perguntas...
-                  </>
-                ) : (
-                  <>
-                    Continuar para as perguntas
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-bold text-white bg-[#0F3D34] rounded-lg hover:bg-[#0A2C25] disabled:opacity-50 transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {wizardStep === 5 ? "Preparando..." : "Montando..."}
+                    </>
+                  ) : wizardStep === 8 ? (
+                    <>
+                      Montar oração
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      Próximo passo
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </section>
 
-          {/* Editorial Right Rail: Daily Verse + Purpose */}
-          <aside className="lg:border-l lg:border-[#E5E1D8] lg:pl-9 space-y-8">
-            <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-2">
-                Sugestão de Hoje · {todayTheme.category}
+          {/* Right Rail: Journey Overview & Today's Verse */}
+          <aside className="space-y-8">
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6">
+              <p className="text-xs font-bold text-[#0F3D34] mb-1">
+                Caminho da Oração
               </p>
-              <h2 className="font-serif text-2xl font-medium text-[#1C1B18] leading-snug">
-                {todayTheme.title}
+              <h2 className="font-display-condensed text-2xl text-[#111827] mb-4">
+                Etapas preenchidas
               </h2>
-              <blockquote className="mt-4 py-4 border-y border-[#E5E1D8]">
-                <p className="font-serif italic text-lg text-[#1C1B18] leading-relaxed">
+
+              <ol className="space-y-2.5">
+                {HEART_STEPS.map((item) => {
+                  const filled = heart[item.field].trim().length > 0;
+                  const isCurrent = wizardStep === item.step;
+                  return (
+                    <li key={item.step}>
+                      <button
+                        type="button"
+                        onClick={() => onWizardStepChange(item.step)}
+                        className={`w-full text-left flex items-center justify-between gap-2 py-1.5 text-xs transition-colors ${
+                          isCurrent
+                            ? "text-[#0F3D34] font-bold"
+                            : "text-[#525C6B] font-light hover:text-[#111827]"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2.5 truncate">
+                          <span className="font-mono tabular-nums text-[11px] text-[#7B8494]">
+                            0{item.step}
+                          </span>
+                          <span className="truncate">{item.shortLabel}</span>
+                        </span>
+                        {filled && (
+                          <Check className="w-3.5 h-3.5 text-[#0F3D34] shrink-0" />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+
+                {[6, 7, 8].map((qStep, idx) => {
+                  const qObj = questionsData?.questions[idx];
+                  const unlocked = Boolean(qObj);
+                  const filled = Boolean(qObj && (answers[qObj.id] ?? "").trim());
+                  const isCurrent = wizardStep === qStep;
+                  return (
+                    <li key={qStep}>
+                      <button
+                        type="button"
+                        disabled={!unlocked}
+                        onClick={() => unlocked && onWizardStepChange(qStep as WizardStep)}
+                        className={`w-full text-left flex items-center justify-between gap-2 py-1.5 text-xs transition-colors ${
+                          isCurrent
+                            ? "text-[#0F3D34] font-bold"
+                            : unlocked
+                              ? "text-[#525C6B] font-light hover:text-[#111827]"
+                              : "text-[#9CA3AF] font-light cursor-default"
+                        }`}
+                      >
+                        <span className="flex items-center gap-2.5 truncate">
+                          <span className="font-mono tabular-nums text-[11px] text-[#7B8494]">
+                            0{qStep}
+                          </span>
+                          <span className="truncate">
+                            {qObj ? `Reflexão: ${qObj.focus}` : `Pergunta reflexiva ${idx + 1}`}
+                          </span>
+                        </span>
+                        {filled && (
+                          <Check className="w-3.5 h-3.5 text-[#0F3D34] shrink-0" />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+
+            <div className="px-1">
+              <p className="text-xs font-bold text-[#0F3D34] mb-1.5">
+                Sugestão de hoje · {todayTheme.verseReference}
+              </p>
+              <h3 className="font-display-condensed text-2xl text-[#111827] leading-snug">
+                {todayTheme.title}
+              </h3>
+              <blockquote className="mt-3 py-3.5 border-y border-[#E5E7EB]">
+                <p className="text-sm font-light italic text-[#111827] leading-relaxed">
                   “{todayTheme.verseText}”
                 </p>
-                <footer className="mt-2 text-xs text-[#5E5B52]">
-                  {todayTheme.verseReference}
-                </footer>
               </blockquote>
-              <p className="mt-4 text-sm text-[#5E5B52] leading-relaxed">
-                {todayTheme.meditation}
-              </p>
               <button
                 type="button"
                 onClick={onSelectTodayTheme}
-                className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#1B3B2F] hover:underline underline-offset-4 whitespace-nowrap"
+                className="mt-3.5 inline-flex items-center gap-1.5 text-xs font-bold text-[#0F3D34] hover:underline underline-offset-4 whitespace-nowrap"
               >
-                <BookOpen className="w-4 h-4" />
+                <BookOpen className="w-3.5 h-3.5" />
                 Usar este tema na oração
               </button>
-            </div>
-
-            <div className="pt-7 border-t border-[#E5E1D8]">
-              <h3 className="text-sm font-semibold text-[#1C1B18]">
-                Para fortalecer, nunca substituir
-              </h3>
-              <p className="mt-2 text-sm text-[#5E5B52] leading-relaxed">
-                Nenhuma ferramenta substitui o encontro pessoal com Deus. O Oratório
-                ajuda você a nomear o que sente, refletir à luz das Escrituras e
-                aprender uma estrutura bíblica simples para orar com autonomia.
-              </p>
             </div>
           </aside>
         </div>
       )}
 
-      {/* STEP 2: TAILORED REFLECTIVE QUESTIONS */}
-      {step === 2 && questionsData && (
-        <div className="max-w-3xl mx-auto">
-          <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-3">
-            Etapa 02 · Aprofundamento do coração
-          </p>
-          <h1 className="font-serif text-3xl sm:text-4xl font-medium text-[#1C1B18] leading-tight">
-            {questionsData.acknowledgment}
-          </h1>
-          <p className="mt-3 text-sm sm:text-base text-[#5E5B52] leading-relaxed">
-            Responda com sinceridade ao que fizer sentido para você hoje. Suas respostas
-            ajudarão a montar uma oração resumida, verdadeira e alinhada à vontade de Deus.
-          </p>
+      {/* FINAL STEP: COMPOSED PRAYER + MARGIN TEACHING NOTES */}
+      {wizardStep === "done" && composedPrayer && (
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-10 items-start">
+          <article className="bg-white border border-[#E5E7EB] rounded-2xl shadow-[0_1px_3px_rgba(15,23,42,0.04)] overflow-hidden">
+            <div className="p-7 sm:p-11">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-light text-[#525C6B]">
+                <span className="font-bold text-[#0F3D34]">Oração pessoal</span>
+                <span aria-hidden="true">·</span>
+                <span className="capitalize">{formatPortugueseDate()}</span>
+                {selectedTheme && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>{selectedTheme.verseReference}</span>
+                  </>
+                )}
+                {usingOfflineMode && (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>Guia local offline</span>
+                  </>
+                )}
+              </div>
 
-          {(speech.isListening || speech.isTranscribing || speech.errorMessage) && (
-            <div className="mt-6">
-              {speech.isListening && (
-                <div className="p-3.5 rounded-md bg-[#EBF1EE] border border-[#C8DBD2] text-sm text-[#1B3B2F] flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium">Ouvindo sua resposta em português...</p>
-                    {speech.interimText && (
-                      <p className="mt-0.5 text-xs text-[#4C6459] truncate">
-                        “{speech.interimText}”
-                      </p>
-                    )}
+              <h1 className="mt-3 font-display-condensed text-4xl sm:text-5xl text-[#111827] leading-[1.06]">
+                {composedPrayer.title}
+              </h1>
+
+              {/* Organized Faithful Summary of Everything the User Shared */}
+              {composedPrayer.organizedSummary &&
+                composedPrayer.organizedSummary.length > 0 && (
+                  <div className="mt-6 p-5 rounded-xl bg-[#FAFAFA] border border-[#E5E7EB]">
+                    <p className="text-xs font-bold text-[#0F3D34] mb-3">
+                      Resumo organizado do que você trouxe
+                    </p>
+                    <dl className="space-y-2.5">
+                      {composedPrayer.organizedSummary.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="grid grid-cols-1 sm:grid-cols-[150px_minmax(0,1fr)] gap-1 sm:gap-4 text-xs sm:text-sm"
+                        >
+                          <dt className="font-bold text-[#111827]">{item.label}</dt>
+                          <dd className="font-light text-[#525C6B] leading-relaxed">
+                            {item.summary}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
                   </div>
-                  <button
-                    type="button"
-                    onClick={speech.stop}
-                    className="px-3 py-1.5 text-xs font-medium bg-[#1B3B2F] text-[#F9F8F4] rounded whitespace-nowrap shrink-0"
+                )}
+
+              <div className="mt-7 pt-7 border-t border-[#E5E7EB] space-y-5 max-w-prose">
+                {composedPrayer.prayerParagraphs.map((paragraph, idx) => (
+                  <p
+                    key={idx}
+                    className="text-base sm:text-[1.1rem] font-light leading-[1.88] text-[#111827]"
                   >
-                    Concluir fala
-                  </button>
-                </div>
-              )}
-              {speech.isTranscribing && (
-                <div className="p-3.5 rounded-md bg-[#F2EFE8] border border-[#E5E1D8] text-sm text-[#1C1B18] flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-[#1B3B2F]" />
-                  <span>Transcrevendo o que você falou...</span>
-                </div>
-              )}
-              {speech.errorMessage && (
-                <div
-                  role="alert"
-                  className="p-3.5 rounded-md bg-[#FDF2F2] border border-[#EBCACA] text-sm text-[#7F1D1D] flex items-start justify-between gap-3"
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+
+              {/* Scripture Anchor Pull Quote */}
+              <div className="mt-9 py-6 border-y border-[#E5E7EB]">
+                <p className="text-xs font-bold text-[#0F3D34] mb-2">
+                  Palavra para ancorar esta oração
+                </p>
+                <p className="text-lg sm:text-xl font-light italic text-[#111827] leading-relaxed">
+                  “{composedPrayer.anchorVerse.text}”
+                </p>
+                <p className="mt-2.5 text-xs font-bold text-[#0F3D34]">
+                  {composedPrayer.anchorVerse.reference}
+                </p>
+                <p className="mt-2 text-sm font-light text-[#525C6B] leading-relaxed">
+                  {composedPrayer.anchorVerse.reflection}
+                </p>
+              </div>
+
+              {/* Practical step of faith */}
+              <div className="mt-6">
+                <p className="text-xs font-bold text-[#0F3D34] mb-1.5">
+                  Passo de fé para hoje
+                </p>
+                <p className="text-sm sm:text-base font-light text-[#111827] leading-relaxed">
+                  {composedPrayer.faithStep}
+                </p>
+              </div>
+
+              {/* Action bar */}
+              <div className="mt-8 pt-7 border-t border-[#E5E7EB] flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => onSendToTimer(composedPrayer)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[#0F3D34] rounded-lg hover:bg-[#0A2C25] transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
                 >
-                  <span>{speech.errorMessage}</span>
-                  <button
-                    type="button"
-                    onClick={speech.clearError}
-                    aria-label="Fechar aviso"
-                    className="p-0.5 text-[#7F1D1D] shrink-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                  <Clock className="w-4 h-4" />
+                  Orar com o cronômetro
+                </button>
 
-          <div className="mt-10 divide-y divide-[#E5E1D8] border-y border-[#E5E1D8]">
-            {questionsData.questions.map((item, idx) => {
-              const voiceKey = `answer:${item.id}`;
-              const isFieldListening =
-                speech.isListening && speech.activeField === voiceKey;
-              return (
-                <div key={item.id} className="py-7">
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <div className="flex items-center gap-2 text-xs text-[#5E5B52]">
-                      <span className="font-mono tabular-nums text-[#1B3B2F]">
-                        0{idx + 1}
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span>{item.focus}</span>
-                    </div>
-                    {speech.isSupported && (
-                      <button
-                        type="button"
-                        onClick={() => toggleVoiceForField(voiceKey, item.question)}
-                        className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
-                          isFieldListening
-                            ? "text-[#1B3B2F] font-semibold"
-                            : "text-[#5E5B52] hover:text-[#1C1B18]"
-                        }`}
-                      >
-                        {isFieldListening ? (
-                          <>
-                            <MicOff className="w-3.5 h-3.5" />
-                            Parar voz
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="w-3.5 h-3.5" />
-                            Responder por voz
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
-                  <label
-                    htmlFor={`answer-${item.id}`}
-                    className="block font-serif text-2xl font-medium text-[#1C1B18] leading-snug"
-                  >
-                    {item.question}
-                  </label>
-                  <p className="mt-1.5 text-xs text-[#8A8578]">{item.hint}</p>
-                  <textarea
-                    id={`answer-${item.id}`}
-                    rows={3}
-                    value={answers[item.id] ?? ""}
-                    onChange={(e) =>
-                      onAnswersChange({
-                        ...answers,
-                        [item.id]: e.target.value,
-                      })
-                    }
-                    placeholder="Escreva ou fale sua resposta aqui (ou deixe em silêncio se preferir)..."
-                    className="mt-3.5 w-full rounded-md bg-white border border-[#E5E1D8] px-4 py-3 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] transition-colors"
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          {error && (
-            <div
-              role="alert"
-              className="mt-6 p-3.5 rounded-md bg-[#FDF2F2] border border-[#EBCACA] text-sm text-[#7F1D1D]"
-            >
-              {error}
-            </div>
-          )}
-
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
-            <button
-              type="button"
-              onClick={() => onStepChange(1)}
-              disabled={loading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[#5E5B52] hover:text-[#1C1B18] transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar e editar
-            </button>
-
-            <button
-              type="button"
-              onClick={handleComposePrayer}
-              disabled={loading}
-              className="inline-flex items-center gap-2 px-6 py-3 text-sm font-medium text-[#F9F8F4] bg-[#1B3B2F] rounded-md hover:bg-[#142D24] disabled:opacity-50 transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Montando sua oração...
-                </>
-              ) : (
-                <>
-                  Montar oração genuína
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 3: COMPOSED PRAYER + MARGIN TEACHING NOTES */}
-      {step === 3 && composedPrayer && (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-12 items-start">
-          {/* Main Reading Column */}
-          <article className="bg-white border border-[#E5E1D8] rounded-md p-7 sm:p-11">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#5E5B52]">
-              <span>Oração pessoal</span>
-              <span aria-hidden="true">·</span>
-              <span className="capitalize">{formatPortugueseDate()}</span>
-              {selectedTheme && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>{selectedTheme.verseReference}</span>
-                </>
-              )}
-              {usingOfflineMode && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>Guia local offline</span>
-                </>
-              )}
-            </div>
-
-            <h1 className="mt-3 font-serif text-3xl sm:text-4xl font-medium text-[#1C1B18] leading-tight">
-              {composedPrayer.title}
-            </h1>
-
-            <div className="mt-7 pt-7 border-t border-[#E5E1D8] space-y-5 max-w-prose">
-              {composedPrayer.prayerParagraphs.map((paragraph, idx) => (
-                <p
-                  key={idx}
-                  className={`font-serif text-[1.28rem] leading-[1.82] text-[#1C1B18] ${
-                    idx === 0
-                      ? "first-letter:text-5xl first-letter:font-serif first-letter:font-medium first-letter:float-left first-letter:mr-3 first-letter:leading-[0.9] first-letter:text-[#1B3B2F]"
-                      : ""
+                <button
+                  type="button"
+                  onClick={() => onSavePrayer(composedPrayer)}
+                  disabled={isSavedCurrent}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-lg border transition-colors whitespace-nowrap shrink-0 min-h-[44px] ${
+                    isSavedCurrent
+                      ? "bg-[#EAF3F0] border-[#C6DFD7] text-[#0F3D34]"
+                      : "bg-white border-[#E5E7EB] text-[#111827] hover:border-[#0F3D34]"
                   }`}
                 >
-                  {paragraph}
-                </p>
-              ))}
+                  {isSavedCurrent ? (
+                    <>
+                      <BookmarkCheck className="w-4 h-4" />
+                      Salva no caderno
+                    </>
+                  ) : (
+                    <>
+                      <BookmarkPlus className="w-4 h-4" />
+                      Salvar no caderno
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyPrayer}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[#525C6B] hover:text-[#111827] border border-[#E5E7EB] rounded-lg transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 text-[#0F3D34]" />
+                      Copiada
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copiar
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onResetAll}
+                  className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-light text-[#525C6B] hover:text-[#111827] transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Começar outra
+                </button>
+              </div>
             </div>
 
-            {/* Scripture Anchor Pull Quote */}
-            <div className="mt-10 py-6 border-y border-[#E5E1D8]">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-2">
-                Palavra para ancorar esta oração
-              </p>
-              <p className="font-serif italic text-xl sm:text-2xl text-[#1C1B18] leading-relaxed">
-                “{composedPrayer.anchorVerse.text}”
-              </p>
-              <p className="mt-2 text-sm font-medium text-[#1B3B2F]">
-                {composedPrayer.anchorVerse.reference}
-              </p>
-              <p className="mt-2 text-sm text-[#5E5B52] leading-relaxed">
-                {composedPrayer.anchorVerse.reflection}
-              </p>
-            </div>
-
-            {/* Practical step of faith */}
-            <div className="mt-6">
-              <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-1.5">
-                Passo de fé para hoje
-              </p>
-              <p className="text-sm sm:text-base text-[#1C1B18] leading-relaxed">
-                {composedPrayer.faithStep}
-              </p>
-            </div>
-
-            {/* Action bar */}
-            <div className="mt-9 pt-7 border-t border-[#E5E1D8] flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => onSendToTimer(composedPrayer)}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[#F9F8F4] bg-[#1B3B2F] rounded-md hover:bg-[#142D24] transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
-              >
-                <Clock className="w-4 h-4" />
-                Orar com o cronômetro
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onSavePrayer(composedPrayer)}
-                disabled={isSavedCurrent}
-                className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-md border transition-colors whitespace-nowrap shrink-0 min-h-[44px] ${
-                  isSavedCurrent
-                    ? "bg-[#EBF1EE] border-[#C8DBD2] text-[#1B3B2F]"
-                    : "bg-white border-[#E5E1D8] text-[#1C1B18] hover:border-[#1B3B2F]"
-                }`}
-              >
-                {isSavedCurrent ? (
-                  <>
-                    <BookmarkCheck className="w-4 h-4" />
-                    Salva no caderno
-                  </>
-                ) : (
-                  <>
-                    <BookmarkPlus className="w-4 h-4" />
-                    Salvar no caderno
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCopyPrayer}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[#5E5B52] hover:text-[#1C1B18] border border-[#E5E1D8] rounded-md transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-4 h-4 text-[#1B3B2F]" />
-                    Copiada
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    Copiar
-                  </>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={onResetAll}
-                className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm text-[#5E5B52] hover:text-[#1C1B18] transition-colors whitespace-nowrap shrink-0 min-h-[44px]"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Começar outra
-              </button>
+            {/* Completed Bottom Progress Footer */}
+            <div className="border-t border-[#E5E7EB] bg-[#FAFAFA]">
+              <div className="h-1 w-full bg-[#0F3D34]" />
+              <div className="px-7 sm:px-11 py-3.5 flex items-center justify-between text-xs text-[#525C6B]">
+                <button
+                  type="button"
+                  onClick={() => onWizardStepChange(8)}
+                  className="inline-flex items-center gap-1.5 font-medium hover:text-[#111827]"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Revisar respostas
+                </button>
+                <span className="font-bold text-[#0F3D34] tabular-nums">
+                  {TOTAL_STEPS} de {TOTAL_STEPS} · Concluído
+                </span>
+              </div>
             </div>
           </article>
 
           {/* Right Margin Rail: Teaching How to Pray */}
           <aside className="space-y-6">
             <div>
-              <p className="text-xs uppercase tracking-[0.14em] text-[#5E5B52] mb-2">
+              <p className="text-xs font-bold text-[#0F3D34] mb-1.5">
                 Aprendendo a orar
               </p>
-              <h2 className="font-serif text-2xl font-medium text-[#1C1B18]">
+              <h2 className="font-display-condensed text-3xl text-[#111827]">
                 Como esta oração foi estruturada
               </h2>
-              <p className="mt-2 text-sm text-[#5E5B52] leading-relaxed">
+              <p className="mt-2 text-sm font-light text-[#525C6B] leading-relaxed">
                 Observe os movimentos usados acima para praticá-los livremente em suas
                 próprias orações diárias:
               </p>
             </div>
 
-            <div className="divide-y divide-[#E5E1D8] border-y border-[#E5E1D8]">
+            <div className="divide-y divide-[#E5E7EB] border-y border-[#E5E7EB]">
               {composedPrayer.structureNotes.map((note, idx) => (
                 <div key={idx} className="py-4">
-                  <p className="text-sm font-semibold text-[#1B3B2F]">
-                    {note.stepLabel}
-                  </p>
-                  <p className="mt-1 text-sm text-[#5E5B52] leading-relaxed">
+                  <p className="text-sm font-bold text-[#0F3D34]">{note.stepLabel}</p>
+                  <p className="mt-1 text-sm font-light text-[#525C6B] leading-relaxed">
                     {note.lesson}
                   </p>
                 </div>
               ))}
             </div>
 
-            <div className="p-4 bg-[#F2EFE8] rounded-md">
-              <p className="text-xs font-medium text-[#1C1B18]">
-                Dica de prática
-              </p>
-              <p className="mt-1.5 text-xs text-[#5E5B52] leading-relaxed">
+            <div className="p-4 bg-[#F2F4F7] rounded-xl">
+              <p className="text-xs font-bold text-[#111827]">Dica de prática</p>
+              <p className="mt-1.5 text-xs font-light text-[#525C6B] leading-relaxed">
                 Leia cada parágrafo devagar, em voz baixa ou em silêncio, e sinta-se
                 livre para pausar e acrescentar suas próprias palavras ao Pai.
               </p>

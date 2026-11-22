@@ -1,27 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --font-serif: "Cormorant Garamond", Georgia, Cambria, serif;
-  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: "Montserrat", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-condensed: "Barlow Condensed", "Montserrat", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "Montserrat", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --color-canvas: #F9F8F4;
-  --color-surface: #F2EFE8;
+  --color-canvas: #FAFAFA;
+  --color-surface: #F2F4F7;
   --color-paper: #FFFFFF;
-  --color-ink: #1C1B18;
-  --color-ink-muted: #5E5B52;
-  --color-ink-subtle: #8A8578;
-  --color-hairline: #E5E1D8;
-  --color-sanctuary: #1B3B2F;
-  --color-sanctuary-hover: #142D24;
-  --color-sanctuary-soft: #EBF1EE;
-  --color-olive-muted: #4C6459;
-  --color-bronze: #7A5C38;
+  --color-ink: #111827;
+  --color-ink-muted: #525C6B;
+  --color-ink-subtle: #7B8494;
+  --color-hairline: #E5E7EB;
+  --color-sanctuary: #0F3D34;
+  --color-sanctuary-hover: #0A2C25;
+  --color-sanctuary-soft: #EAF3F0;
 }
 
 @layer base {
   html {
     font-family: var(--font-sans);
+    font-weight: 300;
     background-color: var(--color-canvas);
     color: var(--color-ink);
     scroll-behavior: smooth;
@@ -44,6 +44,12 @@
     outline: 2px solid var(--color-sanctuary);
     outline-offset: 2px;
   }
+}
+
+.font-display-condensed {
+  font-family: var(--font-condensed);
+  font-weight: 700;
+  letter-spacing: -0.015em;
 }
 
 @media (prefers-reduced-motion: reduce) {

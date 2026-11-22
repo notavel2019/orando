@@ -217,7 +217,7 @@ fs.writeFileSync(
   path.join(valuesDir, "oratorio_launcher_colors.xml"),
   `<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="oratorio_launcher_bg">#1B3B2F</color>
+    <color name="oratorio_launcher_bg">#0F3D34</color>
 </resources>
 `,
   "utf8"
