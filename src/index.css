@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", Georgia, Cambria, serif;
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-canvas: #F9F8F4;
+  --color-surface: #F2EFE8;
+  --color-paper: #FFFFFF;
+  --color-ink: #1C1B18;
+  --color-ink-muted: #5E5B52;
+  --color-ink-subtle: #8A8578;
+  --color-hairline: #E5E1D8;
+  --color-sanctuary: #1B3B2F;
+  --color-sanctuary-hover: #142D24;
+  --color-sanctuary-soft: #EBF1EE;
+  --color-olive-muted: #4C6459;
+  --color-bronze: #7A5C38;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--color-sanctuary);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

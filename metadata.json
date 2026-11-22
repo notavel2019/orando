@@ -1,0 +1,6 @@
+{
+  "name": "Oratório",
+  "description": "Companheiro de oração cristã que escuta o coração, conduz perguntas reflexivas e ajuda a construir orações genuínas alinhadas às Escrituras, com temas bíblicos diários e cronômetro de foco.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
