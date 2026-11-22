@@ -317,6 +317,60 @@ async function startServer() {
     }
   });
 
+  // Server-side audio transcription using gemini-3.5-transcribe (fallback for browsers without Web Speech API)
+  const ALLOWED_AUDIO_MIME = new Set([
+    "audio/webm",
+    "audio/ogg",
+    "audio/mp4",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/aac",
+    "audio/x-m4a",
+  ]);
+
+  app.post(
+    "/api/prayer/transcribe",
+    express.json({ limit: "8mb" }),
+    async (req, res) => {
+      try {
+        const rawBase64 = typeof req.body?.audioBase64 === "string" ? req.body.audioBase64.trim() : "";
+        const rawMime = typeof req.body?.mimeType === "string" ? req.body.mimeType.split(";")[0].trim().toLowerCase() : "";
+
+        if (!rawBase64 || rawBase64.length > 6_500_000 || !/^[A-Za-z0-9+/=]+$/.test(rawBase64)) {
+          res.status(400).json({ error: "Áudio inválido ou muito longo. Tente uma gravação mais curta." });
+          return;
+        }
+        const safeMime = ALLOWED_AUDIO_MIME.has(rawMime) ? rawMime : "audio/webm";
+
+        const ai = getAiClient();
+        const response = await generateWithRetry(() =>
+          ai.models.generateContent({
+            model: "gemini-3.5-transcribe",
+            contents: {
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: safeMime,
+                    data: rawBase64,
+                  },
+                },
+                {
+                  text: "Transcreva fielmente em português do Brasil o que foi falado neste áudio. Retorne apenas o texto transcrito, sem comentários ou formatação extra.",
+                },
+              ],
+            },
+          })
+        );
+
+        const text = (response.text ?? "").trim();
+        res.json({ text });
+      } catch (error) {
+        const mapped = mapGeminiError(error);
+        res.status(mapped.status).json({ error: mapped.message });
+      }
+    }
+  );
+
   // Step 1 -> Step 2: Generate 3 tailored pastoral reflection questions
   app.post("/api/prayer/questions", async (req, res) => {
     try {

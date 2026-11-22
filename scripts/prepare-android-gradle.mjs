@@ -15,6 +15,16 @@ const androidDir = path.resolve("android");
 const appDir = path.resolve(androidDir, "app");
 const buildGradlePath = path.resolve(appDir, "build.gradle");
 const manifestPath = path.resolve(appDir, "src", "main", "AndroidManifest.xml");
+const mainActivityPath = path.resolve(
+  appDir,
+  "src",
+  "main",
+  "java",
+  "com",
+  "oratorio",
+  "app",
+  "MainActivity.java"
+);
 const resDir = path.resolve(appDir, "src", "main", "res");
 const localPropsPath = path.resolve(androidDir, "local.properties");
 
@@ -57,13 +67,24 @@ if (hasKeystore && !gradle.includes("signingConfigs")) {
 fs.writeFileSync(buildGradlePath, gradle, "utf8");
 
 // Keep AndroidManifest permissions minimal (no REQUEST_INSTALL_PACKAGES, which triggers
-// Google Play Protect warnings on sideloaded APKs; system browser/installer handles APK updates).
+// Google Play Protect warnings on sideloaded APKs) and declare RECOGNIZE_SPEECH query
+// so Android 11+ devices resolve the native Google voice recognition activity cleanly.
 if (fs.existsSync(manifestPath)) {
   let manifest = fs.readFileSync(manifestPath, "utf8");
   manifest = manifest.replace(
     /\s*<uses-permission\s+android:name="android\.permission\.REQUEST_INSTALL_PACKAGES"\s*\/>/g,
     ""
   );
+  if (!manifest.includes("android.speech.action.RECOGNIZE_SPEECH")) {
+    const queryBlock = `
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+</manifest>`;
+    manifest = manifest.replace(/<\/manifest>\s*$/, queryBlock);
+  }
   if (!manifest.includes("android:allowBackup")) {
     manifest = manifest.replace(
       /<application([^>]*)>/,
@@ -72,6 +93,116 @@ if (fs.existsSync(manifestPath)) {
   }
   fs.writeFileSync(manifestPath, manifest, "utf8");
 }
+
+// Install native Android Speech-to-Text JavascriptInterface bridge inside MainActivity.java
+// Uses Android's built-in RecognizerIntent.ACTION_RECOGNIZE_SPEECH (zero third-party plugins,
+// zero extra risky permissions, full Brazilian Portuguese voice dictation).
+fs.mkdirSync(path.dirname(mainActivityPath), { recursive: true });
+fs.writeFileSync(
+  mainActivityPath,
+  `package com.oratorio.app;
+
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.os.Bundle;
+import android.speech.RecognizerIntent;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import com.getcapacitor.BridgeActivity;
+import java.util.ArrayList;
+import org.json.JSONObject;
+
+public class MainActivity extends BridgeActivity {
+    private ActivityResultLauncher<Intent> speechLauncher;
+    private boolean speechInterfaceAttached = false;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        speechLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                    ArrayList<String> matches = result.getData()
+                        .getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    if (matches != null && !matches.isEmpty()) {
+                        sendSpeechResult(matches.get(0), null);
+                        return;
+                    }
+                }
+                sendSpeechResult(null, "cancelled");
+            }
+        );
+
+        attachSpeechInterface();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        attachSpeechInterface();
+    }
+
+    private void attachSpeechInterface() {
+        if (speechInterfaceAttached) return;
+        WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+        if (webView != null) {
+            webView.addJavascriptInterface(new SpeechBridge(), "OratorioAndroidSpeech");
+            speechInterfaceAttached = true;
+        }
+    }
+
+    private void sendSpeechResult(String text, String error) {
+        runOnUiThread(() -> {
+            WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+            if (webView == null) return;
+            String jsText = text != null ? JSONObject.quote(text) : "null";
+            String jsErr = error != null ? JSONObject.quote(error) : "null";
+            webView.evaluateJavascript(
+                "window.__oratorioSpeechCallback && window.__oratorioSpeechCallback(" + jsText + "," + jsErr + ");",
+                null
+            );
+        });
+    }
+
+    public class SpeechBridge {
+        @JavascriptInterface
+        public boolean isAvailable() {
+            return true;
+        }
+
+        @JavascriptInterface
+        public void startSpeech(String language, String prompt) {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE,
+                    (language != null && !language.isEmpty()) ? language : "pt-BR"
+                );
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "pt-BR");
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_PROMPT,
+                    (prompt != null && !prompt.isEmpty()) ? prompt : "Fale o que esta no seu coracao..."
+                );
+                try {
+                    speechLauncher.launch(intent);
+                } catch (ActivityNotFoundException e) {
+                    sendSpeechResult(null, "unavailable");
+                } catch (Exception e) {
+                    sendSpeechResult(null, "failed");
+                }
+            });
+        }
+    }
+}
+`,
+  "utf8"
+);
 
 // Configure a clean custom Oratório adaptive launcher icon (replaces default Capacitor icon)
 const valuesDir = path.join(resDir, "values");
@@ -128,5 +259,5 @@ fs.writeFileSync(path.join(anydpiDir, "ic_launcher.xml"), adaptiveIconXml, "utf8
 fs.writeFileSync(path.join(anydpiDir, "ic_launcher_round.xml"), adaptiveIconXml, "utf8");
 
 console.log(
-  `Configured Android Gradle: versionName=${versionName}, versionCode=${versionCode}, signedRelease=${hasKeystore}, sdkDir=${sdkDir || "(env)"}`
+  `Configured Android Gradle + Native Speech Bridge: versionName=${versionName}, versionCode=${versionCode}, signedRelease=${hasKeystore}, sdkDir=${sdkDir || "(env)"}`
 );

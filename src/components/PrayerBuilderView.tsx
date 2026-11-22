@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -100,35 +100,40 @@ export function PrayerBuilderView({
   const [error, setError] = useState<string | null>(null);
   const [usingOfflineMode, setUsingOfflineMode] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activeVoiceField, setActiveVoiceField] = useState<keyof HeartInput | null>(null);
+
+  const heartRef = useRef(heart);
+  heartRef.current = heart;
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
 
   const handleVoiceTranscript = useCallback(
-    (spoken: string) => {
-      const target: keyof HeartInput = activeVoiceField ?? "freeText";
-      const current = heart[target];
+    (fieldKey: string, spoken: string) => {
+      if (fieldKey.startsWith("answer:")) {
+        const qId = fieldKey.slice("answer:".length);
+        const curAnswers = answersRef.current;
+        const current = curAnswers[qId] ?? "";
+        onAnswersChange({
+          ...curAnswers,
+          [qId]: current ? `${current} ${spoken}` : spoken,
+        });
+        return;
+      }
+
+      const key = fieldKey as keyof HeartInput;
+      const curHeart = heartRef.current;
+      const current = curHeart[key] ?? "";
       onHeartChange({
-        ...heart,
-        [target]: current ? `${current} ${spoken}` : spoken,
+        ...curHeart,
+        [key]: current ? `${current} ${spoken}` : spoken,
       });
     },
-    [activeVoiceField, heart, onHeartChange]
+    [onAnswersChange, onHeartChange]
   );
 
-  const speech = useSpeechInput(handleVoiceTranscript);
+  const speech = useSpeechInput<string>(handleVoiceTranscript);
 
-  const toggleVoiceForField = (field: keyof HeartInput) => {
-    if (speech.isListening && activeVoiceField === field) {
-      speech.stop();
-      setActiveVoiceField(null);
-      return;
-    }
-    if (speech.isListening) {
-      speech.stop();
-    }
-    setActiveVoiceField(field);
-    setTimeout(() => {
-      speech.toggle();
-    }, 30);
+  const toggleVoiceForField = (fieldKey: string, promptLabel: string) => {
+    speech.toggleField(fieldKey, promptLabel);
   };
 
   const hasHeartContent = Boolean(
@@ -146,7 +151,6 @@ export function PrayerBuilderView({
     }
     if (speech.isListening) {
       speech.stop();
-      setActiveVoiceField(null);
     }
 
     setError(null);
@@ -379,6 +383,55 @@ export function PrayerBuilderView({
               ))}
             </div>
 
+            {/* Live voice status or error notice */}
+            {(speech.isListening || speech.isTranscribing || speech.errorMessage) && (
+              <div className="mt-6">
+                {speech.isListening && (
+                  <div className="p-3.5 rounded-md bg-[#EBF1EE] border border-[#C8DBD2] text-sm text-[#1B3B2F] flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">Ouvindo sua voz em português...</p>
+                      {speech.interimText && (
+                        <p className="mt-0.5 text-xs text-[#4C6459] truncate">
+                          “{speech.interimText}”
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={speech.stop}
+                      className="px-3 py-1.5 text-xs font-medium bg-[#1B3B2F] text-[#F9F8F4] rounded whitespace-nowrap shrink-0"
+                    >
+                      Concluir fala
+                    </button>
+                  </div>
+                )}
+
+                {speech.isTranscribing && (
+                  <div className="p-3.5 rounded-md bg-[#F2EFE8] border border-[#E5E1D8] text-sm text-[#1C1B18] flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#1B3B2F]" />
+                    <span>Transcrevendo o que você falou...</span>
+                  </div>
+                )}
+
+                {speech.errorMessage && (
+                  <div
+                    role="alert"
+                    className="p-3.5 rounded-md bg-[#FDF2F2] border border-[#EBCACA] text-sm text-[#7F1D1D] flex items-start justify-between gap-3"
+                  >
+                    <span>{speech.errorMessage}</span>
+                    <button
+                      type="button"
+                      onClick={speech.clearError}
+                      aria-label="Fechar aviso"
+                      className="p-0.5 text-[#7F1D1D] shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Structured dimensions directly honoring the audio prompt */}
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
@@ -392,14 +445,16 @@ export function PrayerBuilderView({
                   {speech.isSupported && (
                     <button
                       type="button"
-                      onClick={() => toggleVoiceForField("feelings")}
-                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap ${
-                        speech.isListening && activeVoiceField === "feelings"
+                      onClick={() =>
+                        toggleVoiceForField("feelings", "Fale seus sentimentos de hoje...")
+                      }
+                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
+                        speech.isListening && speech.activeField === "feelings"
                           ? "text-[#1B3B2F] font-semibold"
                           : "text-[#5E5B52] hover:text-[#1C1B18]"
                       }`}
                     >
-                      {speech.isListening && activeVoiceField === "feelings" ? (
+                      {speech.isListening && speech.activeField === "feelings" ? (
                         <>
                           <MicOff className="w-3.5 h-3.5" />
                           Parar voz
@@ -434,14 +489,16 @@ export function PrayerBuilderView({
                   {speech.isSupported && (
                     <button
                       type="button"
-                      onClick={() => toggleVoiceForField("desires")}
-                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap ${
-                        speech.isListening && activeVoiceField === "desires"
+                      onClick={() =>
+                        toggleVoiceForField("desires", "Fale seus desejos e pretensões...")
+                      }
+                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
+                        speech.isListening && speech.activeField === "desires"
                           ? "text-[#1B3B2F] font-semibold"
                           : "text-[#5E5B52] hover:text-[#1C1B18]"
                       }`}
                     >
-                      {speech.isListening && activeVoiceField === "desires" ? (
+                      {speech.isListening && speech.activeField === "desires" ? (
                         <>
                           <MicOff className="w-3.5 h-3.5" />
                           Parar voz
@@ -476,14 +533,16 @@ export function PrayerBuilderView({
                   {speech.isSupported && (
                     <button
                       type="button"
-                      onClick={() => toggleVoiceForField("fears")}
-                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap ${
-                        speech.isListening && activeVoiceField === "fears"
+                      onClick={() =>
+                        toggleVoiceForField("fears", "Fale o que você teme ou tem medo...")
+                      }
+                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
+                        speech.isListening && speech.activeField === "fears"
                           ? "text-[#1B3B2F] font-semibold"
                           : "text-[#5E5B52] hover:text-[#1C1B18]"
                       }`}
                     >
-                      {speech.isListening && activeVoiceField === "fears" ? (
+                      {speech.isListening && speech.activeField === "fears" ? (
                         <>
                           <MicOff className="w-3.5 h-3.5" />
                           Parar voz
@@ -518,14 +577,16 @@ export function PrayerBuilderView({
                   {speech.isSupported && (
                     <button
                       type="button"
-                      onClick={() => toggleVoiceForField("courage")}
-                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap ${
-                        speech.isListening && activeVoiceField === "courage"
+                      onClick={() =>
+                        toggleVoiceForField("courage", "Fale onde você precisa de coragem...")
+                      }
+                      className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
+                        speech.isListening && speech.activeField === "courage"
                           ? "text-[#1B3B2F] font-semibold"
                           : "text-[#5E5B52] hover:text-[#1C1B18]"
                       }`}
                     >
-                      {speech.isListening && activeVoiceField === "courage" ? (
+                      {speech.isListening && speech.activeField === "courage" ? (
                         <>
                           <MicOff className="w-3.5 h-3.5" />
                           Parar voz
@@ -563,14 +624,16 @@ export function PrayerBuilderView({
                 {speech.isSupported && (
                   <button
                     type="button"
-                    onClick={() => toggleVoiceForField("freeText")}
-                    className={`inline-flex items-center gap-1.5 text-xs transition-colors whitespace-nowrap ${
-                      speech.isListening && activeVoiceField === "freeText"
+                    onClick={() =>
+                      toggleVoiceForField("freeText", "Fale livremente o que está no seu coração...")
+                    }
+                    className={`inline-flex items-center gap-1.5 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
+                      speech.isListening && speech.activeField === "freeText"
                         ? "text-[#1B3B2F] font-semibold"
                         : "text-[#5E5B52] hover:text-[#1C1B18]"
                     }`}
                   >
-                    {speech.isListening && activeVoiceField === "freeText" ? (
+                    {speech.isListening && speech.activeField === "freeText" ? (
                       <>
                         <MicOff className="w-3.5 h-3.5" />
                         Ouvindo — tocar para parar
@@ -686,38 +749,114 @@ export function PrayerBuilderView({
             ajudarão a montar uma oração resumida, verdadeira e alinhada à vontade de Deus.
           </p>
 
-          <div className="mt-10 divide-y divide-[#E5E1D8] border-y border-[#E5E1D8]">
-            {questionsData.questions.map((item, idx) => (
-              <div key={item.id} className="py-7">
-                <div className="flex items-center gap-2 text-xs text-[#5E5B52] mb-2">
-                  <span className="font-mono tabular-nums text-[#1B3B2F]">
-                    0{idx + 1}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <span>{item.focus}</span>
+          {(speech.isListening || speech.isTranscribing || speech.errorMessage) && (
+            <div className="mt-6">
+              {speech.isListening && (
+                <div className="p-3.5 rounded-md bg-[#EBF1EE] border border-[#C8DBD2] text-sm text-[#1B3B2F] flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">Ouvindo sua resposta em português...</p>
+                    {speech.interimText && (
+                      <p className="mt-0.5 text-xs text-[#4C6459] truncate">
+                        “{speech.interimText}”
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={speech.stop}
+                    className="px-3 py-1.5 text-xs font-medium bg-[#1B3B2F] text-[#F9F8F4] rounded whitespace-nowrap shrink-0"
+                  >
+                    Concluir fala
+                  </button>
                 </div>
-                <label
-                  htmlFor={`answer-${item.id}`}
-                  className="block font-serif text-2xl font-medium text-[#1C1B18] leading-snug"
+              )}
+              {speech.isTranscribing && (
+                <div className="p-3.5 rounded-md bg-[#F2EFE8] border border-[#E5E1D8] text-sm text-[#1C1B18] flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#1B3B2F]" />
+                  <span>Transcrevendo o que você falou...</span>
+                </div>
+              )}
+              {speech.errorMessage && (
+                <div
+                  role="alert"
+                  className="p-3.5 rounded-md bg-[#FDF2F2] border border-[#EBCACA] text-sm text-[#7F1D1D] flex items-start justify-between gap-3"
                 >
-                  {item.question}
-                </label>
-                <p className="mt-1.5 text-xs text-[#8A8578]">{item.hint}</p>
-                <textarea
-                  id={`answer-${item.id}`}
-                  rows={3}
-                  value={answers[item.id] ?? ""}
-                  onChange={(e) =>
-                    onAnswersChange({
-                      ...answers,
-                      [item.id]: e.target.value,
-                    })
-                  }
-                  placeholder="Escreva sua resposta aqui (ou deixe em silêncio se preferir)..."
-                  className="mt-3.5 w-full rounded-md bg-white border border-[#E5E1D8] px-4 py-3 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] transition-colors"
-                />
-              </div>
-            ))}
+                  <span>{speech.errorMessage}</span>
+                  <button
+                    type="button"
+                    onClick={speech.clearError}
+                    aria-label="Fechar aviso"
+                    className="p-0.5 text-[#7F1D1D] shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-10 divide-y divide-[#E5E1D8] border-y border-[#E5E1D8]">
+            {questionsData.questions.map((item, idx) => {
+              const voiceKey = `answer:${item.id}`;
+              const isFieldListening =
+                speech.isListening && speech.activeField === voiceKey;
+              return (
+                <div key={item.id} className="py-7">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2 text-xs text-[#5E5B52]">
+                      <span className="font-mono tabular-nums text-[#1B3B2F]">
+                        0{idx + 1}
+                      </span>
+                      <span aria-hidden="true">·</span>
+                      <span>{item.focus}</span>
+                    </div>
+                    {speech.isSupported && (
+                      <button
+                        type="button"
+                        onClick={() => toggleVoiceForField(voiceKey, item.question)}
+                        className={`inline-flex items-center gap-1 text-xs transition-colors whitespace-nowrap min-h-[32px] px-1.5 ${
+                          isFieldListening
+                            ? "text-[#1B3B2F] font-semibold"
+                            : "text-[#5E5B52] hover:text-[#1C1B18]"
+                        }`}
+                      >
+                        {isFieldListening ? (
+                          <>
+                            <MicOff className="w-3.5 h-3.5" />
+                            Parar voz
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="w-3.5 h-3.5" />
+                            Responder por voz
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <label
+                    htmlFor={`answer-${item.id}`}
+                    className="block font-serif text-2xl font-medium text-[#1C1B18] leading-snug"
+                  >
+                    {item.question}
+                  </label>
+                  <p className="mt-1.5 text-xs text-[#8A8578]">{item.hint}</p>
+                  <textarea
+                    id={`answer-${item.id}`}
+                    rows={3}
+                    value={answers[item.id] ?? ""}
+                    onChange={(e) =>
+                      onAnswersChange({
+                        ...answers,
+                        [item.id]: e.target.value,
+                      })
+                    }
+                    placeholder="Escreva ou fale sua resposta aqui (ou deixe em silêncio se preferir)..."
+                    className="mt-3.5 w-full rounded-md bg-white border border-[#E5E1D8] px-4 py-3 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] transition-colors"
+                  />
+                </div>
+              );
+            })}
           </div>
 
           {error && (
