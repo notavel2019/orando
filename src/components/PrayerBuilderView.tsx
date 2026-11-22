@@ -22,7 +22,11 @@ import type {
 } from "../types/prayer";
 import { useSpeechInput } from "../hooks/useSpeechInput";
 import { formatPortugueseDate } from "../data/dailyThemes";
-import { apiUrl } from "../utils/appUpdate";
+import { apiUrl, isStandaloneOfflineOrigin } from "../utils/appUpdate";
+import {
+  composeOfflinePrayer,
+  generateOfflineQuestions,
+} from "../utils/offlinePrayerGuide";
 
 interface PrayerBuilderViewProps {
   todayTheme: DailyBiblicalTheme;
@@ -94,6 +98,7 @@ export function PrayerBuilderView({
 }: PrayerBuilderViewProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [usingOfflineMode, setUsingOfflineMode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeVoiceField, setActiveVoiceField] = useState<keyof HeartInput | null>(null);
 
@@ -146,21 +151,43 @@ export function PrayerBuilderView({
 
     setError(null);
     setLoading(true);
+    const themeContext = selectedTheme
+      ? `${selectedTheme.title} (${selectedTheme.verseReference}: "${selectedTheme.verseText}")`
+      : "";
+
     try {
+      if (isStandaloneOfflineOrigin()) {
+        const offline = generateOfflineQuestions(heart, themeContext);
+        setUsingOfflineMode(true);
+        onQuestionsDataChange(offline);
+        onAnswersChange({});
+        onStepChange(2);
+        return;
+      }
+
       const res = await fetch(apiUrl("/api/prayer/questions"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...heart,
-          themeContext: selectedTheme
-            ? `${selectedTheme.title} (${selectedTheme.verseReference}: "${selectedTheme.verseText}")`
-            : "",
+          themeContext,
         }),
       });
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const offline = generateOfflineQuestions(heart, themeContext);
+        setUsingOfflineMode(true);
+        onQuestionsDataChange(offline);
+        onAnswersChange({});
+        onStepChange(2);
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data?.error || "Não foi possível preparar as perguntas agora.");
       }
+      setUsingOfflineMode(false);
       onQuestionsDataChange(data as QuestionsResponse);
       onAnswersChange({});
       onStepChange(2);
@@ -174,13 +201,24 @@ export function PrayerBuilderView({
   const handleComposePrayer = async () => {
     setError(null);
     setLoading(true);
+    const formattedAnswers = (questionsData?.questions ?? [])
+      .map((q) => ({
+        question: q.question,
+        answer: (answers[q.id] ?? "").trim(),
+      }))
+      .filter((item) => item.answer.length > 0);
+    const themeContext = selectedTheme
+      ? `${selectedTheme.title} (${selectedTheme.verseReference})`
+      : "";
+
     try {
-      const formattedAnswers = (questionsData?.questions ?? [])
-        .map((q) => ({
-          question: q.question,
-          answer: (answers[q.id] ?? "").trim(),
-        }))
-        .filter((item) => item.answer.length > 0);
+      if (isStandaloneOfflineOrigin()) {
+        const offlinePrayer = composeOfflinePrayer(heart, formattedAnswers, themeContext);
+        setUsingOfflineMode(true);
+        onComposedPrayerChange(offlinePrayer);
+        onStepChange(3);
+        return;
+      }
 
       const res = await fetch(apiUrl("/api/prayer/compose"), {
         method: "POST",
@@ -188,15 +226,23 @@ export function PrayerBuilderView({
         body: JSON.stringify({
           heart,
           answers: formattedAnswers,
-          themeContext: selectedTheme
-            ? `${selectedTheme.title} (${selectedTheme.verseReference})`
-            : "",
+          themeContext,
         }),
       });
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const offlinePrayer = composeOfflinePrayer(heart, formattedAnswers, themeContext);
+        setUsingOfflineMode(true);
+        onComposedPrayerChange(offlinePrayer);
+        onStepChange(3);
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data?.error || "Não foi possível montar sua oração agora.");
       }
+      setUsingOfflineMode(false);
       onComposedPrayerChange(data as ComposedPrayer);
       onStepChange(3);
     } catch (err) {
@@ -729,6 +775,12 @@ export function PrayerBuilderView({
                 <>
                   <span aria-hidden="true">·</span>
                   <span>{selectedTheme.verseReference}</span>
+                </>
+              )}
+              {usingOfflineMode && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span>Guia local offline</span>
                 </>
               )}
             </div>

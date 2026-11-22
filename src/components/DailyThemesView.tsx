@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ArrowRight, Clock, Loader2, Search } from "lucide-react";
 import { DAILY_THEMES, formatPortugueseDate } from "../data/dailyThemes";
 import type { DailyBiblicalTheme, ThemeCategory } from "../types/prayer";
-import { apiUrl } from "../utils/appUpdate";
+import { apiUrl, isStandaloneOfflineOrigin } from "../utils/appUpdate";
+import { suggestOfflineTheme } from "../utils/offlinePrayerGuide";
 
 interface DailyThemesViewProps {
   todayTheme: DailyBiblicalTheme;
@@ -45,11 +46,22 @@ export function DailyThemesView({
     setLoadingCustom(true);
     setCustomError(null);
     try {
+      if (isStandaloneOfflineOrigin()) {
+        setCustomTheme(suggestOfflineTheme(cleaned));
+        return;
+      }
+
       const res = await fetch(apiUrl("/api/themes/suggest"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic: cleaned }),
       });
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        setCustomTheme(suggestOfflineTheme(cleaned));
+        return;
+      }
+
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data?.error || "Não foi possível gerar sugestão bíblica agora.");

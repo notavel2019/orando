@@ -72,7 +72,7 @@ export function TopBar({ activeView, onSelectView, onStartFreshPrayer }: TopBarP
       {/* Compact single-row mobile navigation */}
       <nav
         aria-label="Navegação móvel"
-        className="md:hidden border-t border-[#E5E1D8] px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto"
+        className="md:hidden border-t border-[#E5E1D8] px-3 py-1.5 flex items-center justify-between gap-1 overflow-x-auto"
       >
         {NAV_ITEMS.map((item) => {
           const isActive = activeView === item.id;
@@ -81,7 +81,7 @@ export function TopBar({ activeView, onSelectView, onStartFreshPrayer }: TopBarP
               key={item.id}
               type="button"
               onClick={() => onSelectView(item.id)}
-              className={`px-2.5 py-1.5 text-xs font-medium rounded whitespace-nowrap shrink-0 min-h-[36px] transition-colors ${
+              className={`px-2 py-1.5 text-[11px] font-medium rounded whitespace-nowrap shrink-0 min-h-[36px] transition-colors ${
                 isActive
                   ? "bg-[#EBF1EE] text-[#1B3B2F]"
                   : "text-[#5E5B52] hover:text-[#1C1B18]"

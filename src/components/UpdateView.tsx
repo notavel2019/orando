@@ -18,8 +18,11 @@ import {
   compareAppVersion,
   formatMegabytes,
   isSafeGitHubAssetUrl,
+  isValidServerUrl,
   loadSavedGitHubRepo,
+  loadSavedServerUrl,
   persistGitHubRepo,
+  persistServerUrl,
   type UpdateCheckResult,
 } from "../utils/appUpdate";
 
@@ -46,10 +49,30 @@ function formatReleaseDate(iso: string): string {
 
 export function UpdateView() {
   const [repoInput, setRepoInput] = useState<string>(() => loadSavedGitHubRepo());
+  const [serverInput, setServerInput] = useState<string>(() => loadSavedServerUrl());
+  const [serverMsg, setServerMsg] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<UpdateCheckResult | null>(null);
   const [copiedCmd, setCopiedCmd] = useState(false);
+
+  const handleSaveServer = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = serverInput.trim();
+    if (trimmed && !isValidServerUrl(trimmed)) {
+      setServerError("Use um endereço seguro começando com https:// (ou deixe vazio para modo offline).");
+      setServerMsg(null);
+      return;
+    }
+    persistServerUrl(trimmed);
+    setServerError(null);
+    setServerMsg(
+      trimmed
+        ? "Servidor conectado salvo. As perguntas e orações usarão este endereço."
+        : "Modo offline ativado no aparelho (sem servidor externo)."
+    );
+  };
 
   const handleCheck = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,6 +339,65 @@ export function UpdateView() {
               )}
             </div>
           )}
+
+          {/* Optional Backend Server Connection for Android APK */}
+          <div className="bg-white border border-[#E5E1D8] rounded-md p-6 sm:p-8">
+            <h2 className="font-serif text-2xl font-medium text-[#1C1B18]">
+              Servidor do aplicativo no Android (opcional)
+            </h2>
+            <p className="mt-2 text-sm text-[#5E5B52] leading-relaxed">
+              Sem servidor configurado, o APK funciona normalmente em{" "}
+              <strong>modo offline no celular</strong>. Se quiser usar a IA online no
+              APK, cole abaixo o endereço <span className="font-mono text-xs">https://</span>{" "}
+              onde seu servidor do Oratório está hospedado.
+            </p>
+
+            <form onSubmit={handleSaveServer} className="mt-4 space-y-3">
+              <input
+                type="url"
+                value={serverInput}
+                onChange={(e) => {
+                  setServerInput(e.target.value);
+                  setServerMsg(null);
+                  setServerError(null);
+                }}
+                placeholder="https://seu-oratorio.run.app (opcional)"
+                aria-label="Endereço HTTPS do servidor do Oratório"
+                className="w-full rounded-md bg-[#F9F8F4] border border-[#E5E1D8] px-3.5 py-2.5 text-sm text-[#1C1B18] placeholder:text-[#8A8578] focus:border-[#1B3B2F] min-h-[44px]"
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-medium text-[#F9F8F4] bg-[#1B3B2F] rounded-md hover:bg-[#142D24] transition-colors whitespace-nowrap min-h-[38px]"
+                >
+                  Salvar configuração
+                </button>
+                {serverInput && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setServerInput("");
+                      persistServerUrl("");
+                      setServerError(null);
+                      setServerMsg("Modo offline restaurado no aparelho.");
+                    }}
+                    className="text-xs text-[#5E5B52] hover:text-[#1C1B18] whitespace-nowrap"
+                  >
+                    Usar apenas offline
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {serverError && (
+              <p role="alert" className="mt-3 text-xs text-[#7F1D1D]">
+                {serverError}
+              </p>
+            )}
+            {serverMsg && (
+              <p className="mt-3 text-xs text-[#1B3B2F] font-medium">{serverMsg}</p>
+            )}
+          </div>
         </section>
 
         {/* Right Rail: Permanent Signing Guide for Uninstall-Free Updates */}

@@ -5,6 +5,7 @@ export const DEFAULT_GITHUB_REPO =
   (import.meta.env.VITE_DEFAULT_GITHUB_REPO as string | undefined) || "";
 
 const GITHUB_REPO_STORAGE_KEY = "oratorio_github_repo_url_v1";
+const SERVER_URL_STORAGE_KEY = "oratorio_api_server_url_v1";
 
 export interface ParsedGitHubRepo {
   owner: string;
@@ -32,10 +33,59 @@ export interface UpdateCheckResult {
   signedRelease: boolean;
 }
 
+export function isValidServerUrl(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return true;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function loadSavedServerUrl(): string {
+  try {
+    const saved = localStorage.getItem(SERVER_URL_STORAGE_KEY);
+    if (saved && isValidServerUrl(saved)) return saved;
+  } catch {
+    // ignore
+  }
+  return ((import.meta.env.VITE_API_BASE_URL as string | undefined) || "").trim();
+}
+
+export function persistServerUrl(value: string): void {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  try {
+    if (!trimmed) {
+      localStorage.removeItem(SERVER_URL_STORAGE_KEY);
+    } else if (isValidServerUrl(trimmed)) {
+      localStorage.setItem(SERVER_URL_STORAGE_KEY, trimmed);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export function apiUrl(path: string): string {
-  const base = ((import.meta.env.VITE_API_BASE_URL as string | undefined) || "").trim();
+  const base = loadSavedServerUrl();
   if (!base) return path;
   return `${base.replace(/\/+$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function isStandaloneOfflineOrigin(): boolean {
+  if (typeof window === "undefined") return false;
+  const hasRemoteServer = Boolean(loadSavedServerUrl());
+  if (hasRemoteServer) return false;
+  const proto = window.location.protocol;
+  const host = window.location.hostname;
+  // Capacitor Android WebView serves static dist/ at https://localhost or capacitor://localhost without a Node backend
+  const isCapacitorRuntime =
+    Boolean((window as unknown as { Capacitor?: unknown }).Capacitor) ||
+    proto === "capacitor:" ||
+    proto === "file:" ||
+    (proto === "https:" && host === "localhost");
+  return isCapacitorRuntime;
 }
 
 export function loadSavedGitHubRepo(): string {
