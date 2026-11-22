@@ -36,8 +36,22 @@ jobs:
           distribution: "temurin"
           java-version: "21"
 
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Preparar Android SDK pré-instalado e aceitar licenças
+        run: |
+          SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          if [ ! -d "$SDK_DIR" ]; then
+            echo "Android SDK não encontrado em $SDK_DIR"
+            exit 1
+          fi
+          echo "ANDROID_HOME=${SDK_DIR}" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=${SDK_DIR}" >> "$GITHUB_ENV"
+          mkdir -p "${SDK_DIR}/licenses"
+          printf "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\nd56f5187479451eabf01fb78af6dfcb131a6481e" > "${SDK_DIR}/licenses/android-sdk-license"
+          printf "\n84831b9409646a918e30573bab4c9c91346d8abd" > "${SDK_DIR}/licenses/android-sdk-preview-license"
+          SDKMANAGER="$(find "${SDK_DIR}/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -n 1 || true)"
+          if [ -n "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          fi
 
       - name: Calcular versão e build incremental
         id: version
@@ -61,7 +75,7 @@ jobs:
           echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Instalar dependências do projeto
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Gerar build web com metadados de versão
         env:
@@ -73,7 +87,7 @@ jobs:
 
       - name: Preparar projeto Android com Capacitor
         run: |
-          npm install --no-save @capacitor/core @capacitor/cli @capacitor/android
+          npm install --no-save --legacy-peer-deps @capacitor/core @capacitor/cli @capacitor/android
           if [ ! -d "android" ]; then
             npx cap add android
           fi
@@ -86,11 +100,13 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_B64" ]; then
             KEYSTORE_FILE="${RUNNER_TEMP}/oratorio-release.keystore"
-            echo "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_FILE"
+            printf "%s" "$KEYSTORE_B64" | base64 --decode > "$KEYSTORE_FILE"
             echo "keystore_path=${KEYSTORE_FILE}" >> "$GITHUB_OUTPUT"
             echo "signed=true" >> "$GITHUB_OUTPUT"
+            echo "signing_label=Ativa (Release Assinado)" >> "$GITHUB_OUTPUT"
           else
             echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "signing_label=Debug temporario (configure os secrets ANDROID_KEYSTORE_* para atualizar sem desinstalar)" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configurar versionCode, versionName e assinatura no Gradle
@@ -122,6 +138,7 @@ jobs:
             APK_DEST="release-output/oratorio-v${VERSION_NAME}-debug.apk"
           fi
           cp "$APK_SRC" "$APK_DEST"
+          cp "$APK_SRC" "release-output/oratorio-latest.apk"
           echo "apk_path=${APK_DEST}" >> "$GITHUB_OUTPUT"
           echo "apk_filename=$(basename "$APK_DEST")" >> "$GITHUB_OUTPUT"
 
@@ -153,6 +170,7 @@ jobs:
           name: oratorio-apk-v${{ steps.version.outputs.version_name }}
           path: |
             ${{ steps.build_apk.outputs.apk_path }}
+            release-output/oratorio-latest.apk
             release-output/version.json
 
       - name: Publicar GitHub Release com download direto do APK
@@ -167,7 +185,9 @@ jobs:
 
             - **Pacote Android (`applicationId`):** `com.oratorio.app`
             - **Build (`versionCode`):** `${{ steps.version.outputs.version_code }}`
-            - **Assinatura permanente (atualização sem desinstalar):** `${{ steps.signing.outputs.signed == 'true' && 'Ativa (Release Assinado)' || 'Debug temporário — configure os secrets ANDROID_KEYSTORE_* para atualizar sem desinstalar' }}`
+            - **Assinatura permanente (atualização sem desinstalar):** ${{ steps.signing.outputs.signing_label }}
+            - **Link direto sempre atualizado:** `oratorio-latest.apk`
           files: |
             ${{ steps.build_apk.outputs.apk_path }}
+            release-output/oratorio-latest.apk
             release-output/version.json
